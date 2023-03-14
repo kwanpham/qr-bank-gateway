@@ -1,5 +1,10 @@
 package com.infoplusvn.qrbankgateway.dto.common;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
 public class Header {
 
     private String bkCd;
