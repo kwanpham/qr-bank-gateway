@@ -8,3 +8,6 @@ class QrBankGatewayApplicationTests {
 
     @Test
     void contextLoads() {
+    }
+
+}
