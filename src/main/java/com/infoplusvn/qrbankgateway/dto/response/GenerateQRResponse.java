@@ -15,12 +15,12 @@ public class GenerateQRResponse {
     private Data data;
 
     @lombok.Data
-    public class Data {
+    public static class Data {
 
         private String responseCode;
 
         private String responseDesc;
 
-        private Base64 qrImage;
+        private String qrImage;
     }
 }

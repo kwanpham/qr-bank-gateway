@@ -1,5 +1,9 @@
 package com.infoplusvn.qrbankgateway.service;
 
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.WriterException;
+import com.google.zxing.common.BitMatrix;
+import com.google.zxing.qrcode.QRCodeWriter;
 import com.infoplusvn.qrbankgateway.dto.common.Header;
 import com.infoplusvn.qrbankgateway.dto.request.GenerateQRRequest;
 import com.infoplusvn.qrbankgateway.dto.response.GenerateQRResponse;
@@ -7,7 +11,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import javax.swing.plaf.synth.SynthOptionPaneUI;
 import java.io.UnsupportedEncodingException;
+import java.nio.file.FileSystems;
+import java.nio.file.Path;
+import java.util.Base64;
 
 import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest
@@ -58,26 +66,30 @@ class QrServiceTest {
 
         //gen ma qr
 
-        System.out.println(qrService.generateQrIBFTStatic(request));
+        System.out.println(qrService.genResponseQrIBFTStatic(request));
 
     }
 
     @Test
-    public void as() throws UnsupportedEncodingException {
+    public void testGenCRC() throws UnsupportedEncodingException {
         System.out.println(Integer.toHexString(qrService.crc16("00020101021138600010A00000072701300006970403011621129950446040250208QRIBFTTA53037045802VN6304".getBytes("ASCII"))).toUpperCase());
-        System.out.println("9704031101234567".length());
     }
 
 
-    /*@Test
+
+    @Test
     public void testParseQr() {
-        ParserQrRequesetr request = new GenerateQRRequest();
 
         //parse ma qr
+        System.out.println(qrService.ParseQRString("00020101021138560010A0000007270126000697041501121008712015370208QRIBFTTA53037045802VN630467E8"));
 
-        System.out.println(Parser qr response);
+    }
 
-    }*/
+    @Test
+    public void testResponseBase64QR(){
+        System.out.println(qrService.genBase64FromQRImage("00020101021138560010A0000007270126000697041501121008712015370208QRIBFTTA53037045802VN630467E8"));
+
+    }
 
 
 
