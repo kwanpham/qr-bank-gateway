@@ -11,6 +11,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.Constraint;
 import javax.validation.Valid;
 import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
@@ -18,28 +19,18 @@ import java.util.Map;
 
 @RestController
 @RequestMapping(value = "/infogw/qr/v1")
+
 public class QRController {
 
     @Autowired
     QrService qrService;
 
-    @PostMapping(value = "/genQR",consumes = MediaType.APPLICATION_JSON_VALUE)
-    public GenerateQRResponse generateQRCode(@RequestBody @Valid GenerateQRRequest generateQRRequest) throws UnsupportedEncodingException {
+    @PostMapping(value = "/genQR")
+    public GenerateQRResponse generateQRCode(@RequestBody GenerateQRRequest generateQRRequest) throws UnsupportedEncodingException {
 
         return qrService.genResponseQrIBFTStatic(generateQRRequest);
 
     }
 
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public Map<String, String> handleValidationExceptions(MethodArgumentNotValidException ex) {
-        Map<String, String> errors = new HashMap<>();
-        ex.getBindingResult().getAllErrors().forEach((error) -> {
-            String fieldName = ((FieldError) error).getField();
-            String errorMessage = error.getDefaultMessage();
-            errors.put(fieldName, errorMessage);
-        });
-        return errors;
-    }
 
 }

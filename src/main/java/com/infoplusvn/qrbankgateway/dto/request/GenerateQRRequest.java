@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import javax.validation.Valid;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
@@ -12,14 +13,19 @@ import javax.validation.constraints.NotNull;
 @Data
 public class GenerateQRRequest {
 
+    //@NotEmpty(message = "ko dc bo trong")
+    @Valid
     private Header header;
 
+    //@NotEmpty
+    @Valid
     private Data data;
 
 
     @lombok.Data
     public static class Data {
 
+        @Valid
         private QrInfo qrInfo;
 
         @NotBlank
@@ -31,7 +37,6 @@ public class GenerateQRRequest {
 
     @lombok.Data
     public static class QrInfo {
-
 
         @NotBlank
         private String serviceCode;
