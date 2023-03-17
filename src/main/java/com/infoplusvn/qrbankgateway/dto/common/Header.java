@@ -5,16 +5,13 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.validator.constraints.Length;
 
-import javax.validation.constraints.Min;
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotEmpty;
-import javax.validation.constraints.NotNull;
+import javax.validation.constraints.*;
 
 @Data
 public class Header {
 
     @NotBlank
-    @Length(min = 6,max = 6)
+    @Length(min = 6 , max = 6)
     private String bkCd;
 
     @NotBlank

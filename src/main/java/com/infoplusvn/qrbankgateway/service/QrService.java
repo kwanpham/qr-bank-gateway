@@ -4,7 +4,9 @@ import com.google.zxing.BarcodeFormat;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
+import com.infoplusvn.qrbankgateway.dto.request.DeCodeQRRequest;
 import com.infoplusvn.qrbankgateway.dto.request.GenerateQRRequest;
+import com.infoplusvn.qrbankgateway.dto.response.DeCodeQRResponse;
 import com.infoplusvn.qrbankgateway.dto.response.GenerateQRResponse;
 import com.infoplusvn.qrbankgateway.exception.ValidationHelper;
 import org.springframework.stereotype.Service;
@@ -13,13 +15,14 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
-import java.util.Base64;
+import java.util.*;
 
 @Service
 public class QrService {
 
-    public String genQRString(GenerateQRRequest qrRequest) {
+    public final List<String> listServiceCode = Arrays.asList("QRPUSH", "QRCASH", "QRIBFTTC", "QRIBFTTA", "QRADVERTISE");
+
+    /*public String genQRString(GenerateQRRequest qrRequest) {
 
             //phien ban du lieu & phuong thuc khoi tao
             String qr = "000201010211";
@@ -55,12 +58,62 @@ public class QrService {
 
             return qr;
 
+    }*/
+    public String genQRString(GenerateQRRequest qrRequest) {
+
+        //QRString
+        LinkedHashMap<String,String> linkedHashMapQRString = new LinkedHashMap<>();
+
+        //phien ban du lieu (ID 00)
+        linkedHashMapQRString.put("00","01");
+
+        //phuong thuc khoi tao (ID 01)
+        linkedHashMapQRString.put("01","11");
+
+        //Thong tin dinh danh nguoi thu huong (ID 38)
+        LinkedHashMap<String, String> linkedHashMapAccountInfo = new LinkedHashMap<>();
+        //Dinh danh toan cau
+        linkedHashMapAccountInfo.put("00","A000000727");
+
+        //To chuc thanh toan (ID 01)
+        LinkedHashMap<String, String> linkedHashMapMemberBanks = new LinkedHashMap<>();
+        //Don vi thu huong (ID 00)
+        linkedHashMapMemberBanks.put("00", qrRequest.getHeader().getBkCd());
+        //Thong tin nguoi huong thu (ID 01)
+        linkedHashMapMemberBanks.put("01", qrRequest.getData().getQrInfo().getCustomerId());
+
+        //Lay value cua to chuc thanh toan va put vao thong tin dinh danh nguoi thu huong
+        linkedHashMapAccountInfo.put("01", showKeyLengthValue(linkedHashMapMemberBanks));
+        //Loai dich vu
+        linkedHashMapAccountInfo.put("02", qrRequest.getData().getQrInfo().getServiceCode().toUpperCase());
+
+        //lay value cua thong tin dinh danh nguoi thu huong va put vao QRString
+        linkedHashMapQRString.put("38", showKeyLengthValue(linkedHashMapAccountInfo));
+
+        //Ma tien te
+        linkedHashMapQRString.put("53", qrRequest.getData().getQrInfo().getTransCurrency());
+
+
+        //Ma quoc gia
+        linkedHashMapQRString.put("58", qrRequest.getData().getQrInfo().getCountryCode());
+
+        return showKeyLengthValue(linkedHashMapQRString) + "6304";
+
+    }
+
+    private String showKeyLengthValue(LinkedHashMap<String, String> linkedHashMap) {
+        String result = "";
+        Set<String> keySet = linkedHashMap.keySet();
+        for (String key:keySet) {
+            result += key + String.format("%02d", linkedHashMap.get(key).length()) + linkedHashMap.get(key);
+        }
+        return result;
     }
 
     public String genCRC(String qrString) throws UnsupportedEncodingException {
-        String crc = Integer.toHexString(crc16(qrString.getBytes("ASCII"))).toUpperCase();
 
-        return crc;
+        return Integer.toHexString(crc16(qrString.getBytes("ASCII"))).toUpperCase();
+
     }
 
     public int crc16(byte[] value) {
@@ -84,7 +137,7 @@ public class QrService {
         return crc;
     }
 
-    public GenerateQRRequest.QrInfo ParseQRString(String qr) {
+    /*public GenerateQRRequest.QrInfo ParseQRString(String qr) {
 
         GenerateQRRequest.QrInfo qrInfo = new GenerateQRRequest.QrInfo();
 
@@ -114,7 +167,7 @@ public class QrService {
         qrInfo.setTransCurrency(transCurrency);
 
         return qrInfo;
-    }
+    }*/
 
     public String genBase64FromQRImage(String qr) {
 
@@ -145,37 +198,38 @@ public class QrService {
 
     }
 
-    public GenerateQRResponse genResponseQrIBFTStatic(GenerateQRRequest qrRequest) throws UnsupportedEncodingException {
+    public GenerateQRResponse genQRResponse(GenerateQRRequest qrRequest) throws UnsupportedEncodingException {
 
-        ArrayList<String> listServiceCode = new ArrayList<>();
-        listServiceCode.add("QRPUSH");
-        listServiceCode.add("QRCASH");
-        listServiceCode.add("QRIBFTTC");
-        listServiceCode.add("QRIBFTTA");
-        listServiceCode.add("QRADVERTISE");
 
         GenerateQRResponse generateQRResponse = new GenerateQRResponse();
         GenerateQRResponse.Data data = new GenerateQRResponse.Data();
-        generateQRResponse.setData(data);
+
+        generateQRResponse.setHeader(qrRequest.getHeader());
+
+        //generateQRResponse.setData(data);
 
         if (!ValidationHelper.isValid(qrRequest)) {
             //System.out.println(ValidationHelper.fieldNames.get());
-            generateQRResponse.getData().setResponseCode("004");
-            generateQRResponse.getData().setResponseDesc("Wrong message format: " + ValidationHelper.fieldNames.get());
+
+            generateQRResponse.getHeader().setErrCode("004");
+            generateQRResponse.getHeader().setErrDesc("Wrong message format: " + ValidationHelper.fieldNames.get());
+
         }
         else {
 
             if (!listServiceCode.contains(qrRequest.getData().getQrInfo().getServiceCode().toUpperCase())) {
-                generateQRResponse.getData().setResponseCode("005");
-                generateQRResponse.getData().setResponseDesc("Invalid service code");
+                generateQRResponse.getHeader().setErrCode("005");
+                generateQRResponse.getHeader().setErrDesc("Invalid service code");
             }
             else {
-                generateQRResponse.setHeader(qrRequest.getHeader());
+
+                generateQRResponse.setData(data);
                 generateQRResponse.getHeader().setReqResGb("RES");
 
-                generateQRResponse.getData().setResponseCode("000");
+                generateQRResponse.getData().setResponseCode("00");
                 generateQRResponse.getData().setResponseDesc("Success");
                 generateQRResponse.getData().setQrImage(genBase64FromQRImage(genQRString(qrRequest) + genCRC(genQRString(qrRequest))));
+                generateQRResponse.getData().setQrString(genQRString(qrRequest) + genCRC(genQRString(qrRequest)));
             }
 
         }
@@ -183,5 +237,59 @@ public class QrService {
         return generateQRResponse;
     }
 
+    public DeCodeQRResponse parseQRString(DeCodeQRRequest deCodeQRRequest) {
+
+        DeCodeQRResponse deCodeQRResponse = new DeCodeQRResponse();
+        DeCodeQRResponse.Data data = new DeCodeQRResponse.Data();
+        DeCodeQRResponse.QrInfo qrInfo = new DeCodeQRResponse.QrInfo();
+
+
+        deCodeQRResponse.setHeader(deCodeQRRequest.getHeader());
+
+        if (!ValidationHelper.isValid(deCodeQRRequest)) {
+
+            deCodeQRResponse.getHeader().setErrCode("004");
+            deCodeQRResponse.getHeader().setErrDesc("Wrong message format: " + ValidationHelper.fieldNames.get());
+
+        }
+        else {
+            data.setQrInfo(qrInfo);
+            deCodeQRResponse.setData(data);
+
+            String qrString = deCodeQRRequest.getData().getQrString();
+
+            LinkedHashMap<String, String> linkedHashMapQRString = new LinkedHashMap<>();
+
+            addHashMapAndCutQrString("",linkedHashMapQRString,qrString);
+
+            String valueOfID38 = linkedHashMapQRString.get("38");
+            addHashMapAndCutQrString("38.",linkedHashMapQRString,valueOfID38);
+
+            String valueOfID38_01 = linkedHashMapQRString.get("38.01");
+            addHashMapAndCutQrString("38.01.",linkedHashMapQRString,valueOfID38_01);
+
+            deCodeQRResponse.getData().setResponseCode("00");
+            deCodeQRResponse.getData().setResponseDesc("Success");
+            deCodeQRResponse.getData().getQrInfo().setServiceCode(linkedHashMapQRString.get("38.02"));
+            deCodeQRResponse.getData().getQrInfo().setCustomerId(linkedHashMapQRString.get("38.01.01"));
+            deCodeQRResponse.getData().getQrInfo().setTransCurrency(linkedHashMapQRString.get("53"));
+            deCodeQRResponse.getData().getQrInfo().setCountryCode(linkedHashMapQRString.get("58"));
+            deCodeQRResponse.getData().getQrInfo().setCrc(linkedHashMapQRString.get("63"));
+
+            deCodeQRResponse.getHeader().setBkCd(linkedHashMapQRString.get("38.01.00"));
+            deCodeQRResponse.getHeader().setReqResGb("RES");
+
+        }
+
+        return deCodeQRResponse;
+    }
+
+
+    private void addHashMapAndCutQrString(String string, LinkedHashMap<String, String> linkedHashMap, String qrString) {
+        while (!qrString.isEmpty()) {
+            linkedHashMap.put(string + qrString.substring(0,2), qrString.substring(4, 4 + Integer.parseInt(qrString.substring(2,4))));
+            qrString = qrString.replace( qrString.substring(0,2) +  qrString.substring(2,4) + qrString.substring(4, 4 + Integer.parseInt(qrString.substring(2,4))),"");
+        }
+    }
 
 }

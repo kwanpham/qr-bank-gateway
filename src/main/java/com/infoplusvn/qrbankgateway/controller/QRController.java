@@ -1,6 +1,8 @@
 package com.infoplusvn.qrbankgateway.controller;
 
+import com.infoplusvn.qrbankgateway.dto.request.DeCodeQRRequest;
 import com.infoplusvn.qrbankgateway.dto.request.GenerateQRRequest;
+import com.infoplusvn.qrbankgateway.dto.response.DeCodeQRResponse;
 import com.infoplusvn.qrbankgateway.dto.response.GenerateQRResponse;
 import com.infoplusvn.qrbankgateway.service.QrService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,7 +30,14 @@ public class QRController {
     @PostMapping(value = "/genQR")
     public GenerateQRResponse generateQRCode(@RequestBody GenerateQRRequest generateQRRequest) throws UnsupportedEncodingException {
 
-        return qrService.genResponseQrIBFTStatic(generateQRRequest);
+        return qrService.genQRResponse(generateQRRequest);
+
+    }
+
+    @PostMapping(value = "/readQR")
+    public DeCodeQRResponse readQRCode(@RequestBody DeCodeQRRequest deCodeQRRequest) {
+
+        return qrService.parseQRString(deCodeQRRequest);
 
     }
 

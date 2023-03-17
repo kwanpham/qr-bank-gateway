@@ -13,11 +13,9 @@ import javax.validation.constraints.NotNull;
 @Data
 public class GenerateQRRequest {
 
-    //@NotEmpty(message = "ko dc bo trong")
     @Valid
     private Header header;
 
-    //@NotEmpty
     @Valid
     private Data data;
 

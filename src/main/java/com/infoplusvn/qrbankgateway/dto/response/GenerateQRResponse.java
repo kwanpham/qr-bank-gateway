@@ -22,5 +22,7 @@ public class GenerateQRResponse {
         private String responseDesc;
 
         private String qrImage;
+
+        private String qrString;
     }
 }
