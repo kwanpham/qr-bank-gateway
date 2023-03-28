@@ -8,6 +8,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 import java.io.UnsupportedEncodingException;
 import java.util.*;
+import java.io.IOException;
+
+import com.google.zxing.WriterException;
 
 @SpringBootTest
 class QrServiceTest {
@@ -43,7 +46,6 @@ class QrServiceTest {
         request.getHeader().setErrCode(null);
 
 
-
         request.getData().getQrInfo().setServiceCode("QRIBFTTA");
 
         request.getData().getQrInfo().setCustomerId("100871201537");
@@ -62,14 +64,12 @@ class QrServiceTest {
         System.out.println(qrService.genQRString(request) + qrService.genCRC(qrService.genQRString(request)));
 
 
-
     }
 
     @Test
     public void testGenCRC() throws UnsupportedEncodingException {
-        System.out.println(Integer.toHexString(qrService.crc16("00020101021138630010A00000072701330006970436011997043686168422410170208QRIBFTTC53037045802VN6304".getBytes("ASCII"))).toUpperCase());
+        System.out.println(Integer.toHexString(qrService.crc16("00020101021138560010A0000007270126000697041501121008712015370208QRIBFTTA53037045802VN6304".getBytes("ASCII"))).toUpperCase());
     }
-
 
 
     @Test
@@ -78,37 +78,57 @@ class QrServiceTest {
 
         LinkedHashMap<String, String> linkedHashMapQRString = new LinkedHashMap<>();
 
-        addHashMapAndCutQrString("",linkedHashMapQRString,qrString);
+        addHashMapAndCutQrString("", linkedHashMapQRString, qrString);
 
         String valueOfID38 = linkedHashMapQRString.get("38");
-        addHashMapAndCutQrString("38.",linkedHashMapQRString,valueOfID38);
+        addHashMapAndCutQrString("38.", linkedHashMapQRString, valueOfID38);
 
         String valueOfID38_01 = linkedHashMapQRString.get("38.01");
-        addHashMapAndCutQrString("38.01.",linkedHashMapQRString,valueOfID38_01);
+        addHashMapAndCutQrString("38.01.", linkedHashMapQRString, valueOfID38_01);
 
 
         System.out.println(linkedHashMapQRString);
 
     }
+
     public void addHashMapAndCutQrString(String string, LinkedHashMap<String, String> linkedHashMap, String qrString) {
         while (!qrString.isEmpty()) {
-            linkedHashMap.put(string + qrString.substring(0,2), qrString.substring(4, 4 + Integer.parseInt(qrString.substring(2,4))));
-            qrString = qrString.replace( qrString.substring(0,2) +  qrString.substring(2,4) + qrString.substring(4, 4 + Integer.parseInt(qrString.substring(2,4))),"");
+            linkedHashMap.put(string + qrString.substring(0, 2), qrString.substring(4, 4 + Integer.parseInt(qrString.substring(2, 4))));
+            qrString = qrString.replace(qrString.substring(0, 2) + qrString.substring(2, 4) + qrString.substring(4, 4 + Integer.parseInt(qrString.substring(2, 4))), "");
         }
     }
 
     @Test
-    public void testGenResponseBase64QR(){
+    public void testGenResponseBase64QR() throws IOException, WriterException {
         System.out.println(qrService.genBase64FromQRImage("00020101021138560010A0000007270126000697041501121008712015370208QRIBFTTA53037045802VN630467E8"));
     }
 
     @Test
-    public void testLength(){
-        System.out.println("00069704150112100871201537".length());
+    public void testLength() {
+        //System.out.println("00069704150112100871201537".length());
+        //System.out.println(testObject(4));
+        /*String qr = "123456789  ";
+        System.out.println(qr.trim().substring(qr.trim().length()-4));*/
+        Date date = new Date();
+        System.out.println(date.toString());
+    }
+
+
+    @Test
+    public Object testObject(int i) {
+        String qrString = "00020101021138560010A0000007270126000697041501121008712015370208QRIBFTTA53037045802VN630467E8";
+
+        LinkedHashMap<String, String> linkedHashMapQRString = new LinkedHashMap<>();
+
+        addHashMapAndCutQrString("", linkedHashMapQRString, qrString);
+        if (i % 2 == 0) {
+            return "chia het cho  2";
+        } else {
+            return linkedHashMapQRString;
+        }
     }
 
 
 
-
-
 }
+
