@@ -1,9 +1,7 @@
 package com.infoplusvn.qrbankgateway.entity;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import lombok.*;
 
 import javax.persistence.*;
 import java.io.Serializable;
@@ -13,8 +11,7 @@ import java.util.List;
 
 @Entity
 @Table(name = "USERS")
-@Getter
-@Setter
+@Data
 @AllArgsConstructor
 @NoArgsConstructor
 public class UserEntity implements Serializable {
@@ -28,8 +25,16 @@ public class UserEntity implements Serializable {
 
     private String password;
 
+    private boolean enabled;
+
     @Column(unique = true)
     private String email;
+
+    private String phone;
+
+    private String company;
+
+    private String address;
 
     @Column(name = "first_name")
     private String firstName;
@@ -40,8 +45,10 @@ public class UserEntity implements Serializable {
     @Column(name = "create_on")
     private LocalDateTime createOn;
 
-    @ElementCollection(fetch = FetchType.EAGER)
-    private List<String> roles;
+//    @ElementCollection(fetch = FetchType.EAGER)
+//    private List<String> roles;
 
-    // getters and setters
+    private String roles;
+
+
 }

@@ -1,8 +1,6 @@
 package com.infoplusvn.qrbankgateway.config;
 
 
-
-
 import com.infoplusvn.qrbankgateway.exception.JwtAuthenticationEntryPoint;
 import com.infoplusvn.qrbankgateway.filter.JwtRequestFilter;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,7 +46,13 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
     @Override
     protected void configure(HttpSecurity httpSecurity) throws Exception {
         httpSecurity.csrf().disable()
-                .authorizeRequests().antMatchers("/infogw/qr/v2/login","/infogw/qr/v1/genQR").permitAll()
+                .cors().and()
+                .authorizeRequests().antMatchers("/infogw/qr/v1/oauth/token",
+                        "/infogw/qr/v3/banks",
+                        "/infogw/qr/v1/genQR",
+                        "/infogw/qr/v1/getAllUsers",
+                        "/infogw/qr/v1/createUser")
+                .permitAll()
                 .anyRequest().authenticated().and()
                 .exceptionHandling().authenticationEntryPoint(jwtAuthenticationEntryPoint).and()
                 .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);

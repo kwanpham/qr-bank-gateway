@@ -45,6 +45,13 @@
             <optional>true</optional>
         </dependency>
 
+
+        <dependency>
+            <groupId>org.modelmapper</groupId>
+            <artifactId>modelmapper</artifactId>
+            <version>3.0.0</version>
+        </dependency>
+
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
@@ -65,11 +72,11 @@
         </dependency>
 
 
-<!--        <dependency>-->
-<!--            <groupId>com.github.gavlyukovskiy</groupId>-->
-<!--            <artifactId>p6spy-spring-boot-starter</artifactId>-->
-<!--            <version>1.7.1</version>-->
-<!--        </dependency>-->
+        <!--        <dependency>-->
+        <!--            <groupId>com.github.gavlyukovskiy</groupId>-->
+        <!--            <artifactId>p6spy-spring-boot-starter</artifactId>-->
+        <!--            <version>1.7.1</version>-->
+        <!--        </dependency>-->
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -98,7 +105,6 @@
             <artifactId>jjwt</artifactId>
             <version>0.9.1</version>
         </dependency>
-
 
 
     </dependencies>

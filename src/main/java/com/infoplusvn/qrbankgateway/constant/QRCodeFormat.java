@@ -15,9 +15,9 @@ public enum QRCodeFormat {
     CONSUMER_ID("01",""), //Thông tin người thụ hưởng
 
     SERVICE_CODE("02",""), //Loại dịch vụ
-    TRANSACTION_CURRENCY("53",""), //Mã tiền tệ
+    TRANSACTION_CURRENCY("53","704"), //Mã tiền tệ
     TRANSACTION_AMOUNT("54",""), //Số tiền giao dịch
-    COUNTRY_CODE("58",""), //Mã quốc gia
+    COUNTRY_CODE("58","VN"), //Mã quốc gia
 
     //Trong Thông tin bổ sung có Mục đích giao dịch(ID 08)
     ADDITION_INFO("62",""), //Thông tin bổ sung

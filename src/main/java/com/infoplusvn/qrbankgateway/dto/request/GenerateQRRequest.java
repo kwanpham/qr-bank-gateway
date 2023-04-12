@@ -26,7 +26,7 @@ public class GenerateQRRequest {
         @Valid
         private QrInfo qrInfo;
 
-        @NotBlank
+        @NotNull
         private String createdUser;
 
         @NotBlank
@@ -43,6 +43,8 @@ public class GenerateQRRequest {
         private String customerId;
 
         @NotBlank
+        private String customerName;
+
         private String transCurrency;
 
         private String transAmount;
