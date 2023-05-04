@@ -1,79 +1,37 @@
 package com.infoplusvn.qrbankgateway.service;
 
-import com.infoplusvn.qrbankgateway.constant.CommonConstant;
-import com.infoplusvn.qrbankgateway.dto.common.UserDTORoleAdmin;
-import com.infoplusvn.qrbankgateway.dto.common.UserDTORoleUser;
-import com.infoplusvn.qrbankgateway.dto.request.UserDTORegisterRequest;
+import com.infoplusvn.qrbankgateway.dto.common.user.UserDTORoleAdmin;
+import com.infoplusvn.qrbankgateway.dto.common.user.UserDTORoleUser;
+import com.infoplusvn.qrbankgateway.dto.request.user.UserDTORegisterRequest;
+import com.infoplusvn.qrbankgateway.dto.response.user.ChangePassword;
 import com.infoplusvn.qrbankgateway.entity.UserEntity;
-import com.infoplusvn.qrbankgateway.repo.UserRepo;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
-@Service
-public class UserService {
+public interface UserService {
+    List<UserEntity> getAllUsers();
 
-    @Autowired
-    private UserRepo userRepo;
+    UserEntity createUser(UserDTORegisterRequest userRequest);
 
+    UserEntity roleUserUpdateUser(UserDTORoleUser userRequest);
 
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+    UserEntity deactiveUser(UserDTORoleAdmin userRequest);
 
-    public List<UserEntity> getAllUsers() {
+    UserEntity getUserById(long id);
 
-        return userRepo.findAll();
-    }
+    UserEntity getUserByUserNameRoleUser(String username);
 
-    public UserEntity createUser(UserDTORegisterRequest userRequest) {
-        UserEntity userEntity = new UserEntity();
+    UserEntity getUserByUserNameRoleAdmin(String username);
 
-        userEntity.setUsername(userRequest.getUsername());
-        userEntity.setPassword(passwordEncoder.encode(userRequest.getPassword()));
-        userEntity.setEmail(userRequest.getEmail());
-        userEntity.setEnabled(true);
-        userEntity.setCreateOn(LocalDateTime.now());
-        userEntity.setRoles(CommonConstant.ROLE_USER);
+    UserEntity getUserByEmail(String email);
 
-        return userRepo.save(userEntity);
-    }
+    List<String> getAllUsername();
 
-    public UserEntity roleUserUpdateUser(UserDTORoleUser userRequest) {
+    List<String> getAllEmail();
 
-        UserEntity userEntity = userRepo.findByUsername(userRequest.getUsername());
+    boolean checkPassword(String CSDLPassword, String passwordRequest);
 
-        userEntity.setUsername(userRequest.getUsername());
-        //userEntity.setPassword(userRequest.getPassword());
-        userEntity.setEmail(userRequest.getEmail());
-        userEntity.setPhone(userRequest.getPhone());
-        userEntity.setCompany(userRequest.getCompany());
-        userEntity.setAddress(userRequest.getAddress());
-        userEntity.setFirstName(userRequest.getFirstName());
-        userEntity.setLastName(userRequest.getLastName());
+    void changePassword(ChangePassword changePassword);
 
-        return userRepo.save(userEntity);
-    }
-
-
-    public UserEntity deactiveUser(UserDTORoleAdmin userRequest) {
-
-        UserEntity user = userRepo.findByUsername(userRequest.getUsername());
-        user.setEnabled(false);
-        return userRepo.save(user);
-    }
-
-    public UserEntity getUserById(long id) {
-        return userRepo.findOneById(id);
-    }
-
-    public UserEntity getUserByUserName(String username) {
-        return userRepo.findByUsername(username);
-    }
-
-    public UserEntity getUserByEmail(String email) {
-        return userRepo.findByEmail(email);
-    }
+    UserEntity roleAdminUpdateUser(UserDTORoleAdmin userDTORoleAdmin);
 }

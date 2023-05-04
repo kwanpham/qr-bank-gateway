@@ -1,15 +1,16 @@
-package com.infoplusvn.qrbankgateway.dto.request;
+package com.infoplusvn.qrbankgateway.dto.request.qribft;
 
-import com.infoplusvn.qrbankgateway.dto.common.Header;
+import com.infoplusvn.qrbankgateway.dto.common.HeaderInfoGW;
 import lombok.Data;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
 
 @Data
 public class GenerateAdQR {
     @Valid
-    private Header header;
+    private HeaderInfoGW header;
 
     @Valid
     private Data data;
@@ -20,6 +21,12 @@ public class GenerateAdQR {
 
         @Valid
         private QrInfo qrInfo;
+
+        @NotNull
+        private String createdUser;
+
+        @NotBlank
+        private String channel;
 
     }
 

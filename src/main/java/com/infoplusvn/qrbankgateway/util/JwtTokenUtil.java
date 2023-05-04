@@ -34,7 +34,7 @@ public class JwtTokenUtil {
     private String createToken(Map<String, Object> claims, String subject, List<String> roles) {
         long now = System.currentTimeMillis();
         Date issuedAt = new Date(now);
-        Date expiration = new Date(now + 1000 * 60 * 60 * 1); // token expires after 1h
+        Date expiration = new Date(now + 1000 * 60 * 60 * 24); // token hết hạn sau 60p
         return Jwts.builder()
                 .setClaims(claims)
                 .setSubject(subject)

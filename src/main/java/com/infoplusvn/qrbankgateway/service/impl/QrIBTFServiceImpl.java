@@ -1,4 +1,4 @@
-package com.infoplusvn.qrbankgateway.service;
+package com.infoplusvn.qrbankgateway.service.impl;
 
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.EncodeHintType;
@@ -6,16 +6,22 @@ import com.google.zxing.WriterException;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
 import com.infoplusvn.qrbankgateway.constant.CommonConstant;
-import com.infoplusvn.qrbankgateway.dto.request.DeCodeQRRequest;
-import com.infoplusvn.qrbankgateway.dto.request.GenerateAdQR;
-import com.infoplusvn.qrbankgateway.dto.request.GenerateQRRequest;
-import com.infoplusvn.qrbankgateway.dto.response.DeCodeQRResponse;
-import com.infoplusvn.qrbankgateway.dto.response.GenerateQRResponse;
+import com.infoplusvn.qrbankgateway.dto.common.qribft.QrCodeDTORoleUser;
+import com.infoplusvn.qrbankgateway.dto.request.qribft.ChangeQRNameRequest;
+import com.infoplusvn.qrbankgateway.dto.request.qribft.DeCodeQRRequest;
+import com.infoplusvn.qrbankgateway.dto.request.qribft.GenerateAdQR;
+import com.infoplusvn.qrbankgateway.dto.request.qribft.GenerateQRRequest;
+import com.infoplusvn.qrbankgateway.dto.response.qribft.DeCodeQRResponse;
+import com.infoplusvn.qrbankgateway.dto.response.qribft.GenerateQRResponse;
 import com.infoplusvn.qrbankgateway.entity.BankEntity;
+import com.infoplusvn.qrbankgateway.entity.QRCodeEntity;
 import com.infoplusvn.qrbankgateway.exception.ValidationHelper;
 import com.infoplusvn.qrbankgateway.constant.ErrorDefination;
 import com.infoplusvn.qrbankgateway.constant.QRCodeFormat;
 import com.infoplusvn.qrbankgateway.repo.BankRepo;
+import com.infoplusvn.qrbankgateway.repo.QrCodeRepo;
+import com.infoplusvn.qrbankgateway.service.QrIBFTService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -29,27 +35,20 @@ import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.List;
 
+@Slf4j
 @Service
-public class QrService {
+public class QrIBTFServiceImpl implements QrIBFTService {
 
-//    final String QRIBFT_STATIC = "11";
-//    final String QRIBFT_DYNAMIC = "12";
-//    final String LENGTH_CRC = "04";
-//    final String FONT_STYLE = "Arial";
-//    final String TITLE_SO_TIEN = "Số tiền: ";
-//    final String TITLE_NOI_DUNG_CK = "Nội dung CK: ";
-//    final String TITLE_TEN_CHU_TK = "Tên chủ TK: ";
-//    final String TITLE_SO_TK = "Số TK: ";
-//    final String IMAGE_URL = "src/main/resources/image/baseImage.png";
-//
-//    final int SIZE_IMAGE_QR = 400;
-//    final List<String> listServiceCode = Arrays.asList("QRPUSH", "QRCASH", "QRIBFTTC", "QRIBFTTA", "QRADVERTISE");
 
     @Autowired
     BankRepo bankRepo;
+
+    @Autowired
+    QrCodeRepo qrCodeRepo;
 
     private String showKeyLengthValue(LinkedHashMap<String, String> linkedHashMap) {
         String result = "";
@@ -60,7 +59,7 @@ public class QrService {
         return result;
     }
 
-    private String genCRC(String qrString) throws UnsupportedEncodingException {
+    public String genCRC(String qrString) throws UnsupportedEncodingException {
 
         return Integer.toHexString(crc16(qrString.getBytes("ASCII"))).toUpperCase();
 
@@ -130,14 +129,14 @@ public class QrService {
         return hints;
     }
 
-    private void putHashMapAndCutQrString(String string, LinkedHashMap<String, String> linkedHashMap, String qrString) {
+    public void putHashMapAndCutQrString(String string, LinkedHashMap<String, String> linkedHashMap, String qrString) {
         while (!qrString.isEmpty()) {
             linkedHashMap.put(string + qrString.substring(0, 2), qrString.substring(4, 4 + Integer.parseInt(qrString.substring(2, 4))));
             qrString = qrString.replace(qrString.substring(0, 4) + qrString.substring(4, 4 + Integer.parseInt(qrString.substring(2, 4))), "");
         }
     }
 
-    private boolean checkCRC(String qrString) throws UnsupportedEncodingException {
+    public boolean checkCRC(String qrString) throws UnsupportedEncodingException {
         qrString = qrString.trim();
         if (genCRC(qrString.substring(0, qrString.length() - 4)).equals(qrString.substring(qrString.length() - 4))) {
             return true;
@@ -159,7 +158,7 @@ public class QrService {
     }
 
     private String replaceComma(String str) {
-        return str.replaceAll(",","");
+        return str.replaceAll(",", "");
     }
 
 
@@ -172,7 +171,7 @@ public class QrService {
         linkedHashMapQRString.put(QRCodeFormat.PAYLOAD_FORMAT_INDICATOR.getId(), QRCodeFormat.PAYLOAD_FORMAT_INDICATOR.getValue());
 
         //phuong thuc khoi tao (ID 01)
-        linkedHashMapQRString.put(QRCodeFormat.POINT_OF_INITIATION_METHOD.getId(), CommonConstant.QRIBFT_STATIC);
+        linkedHashMapQRString.put(QRCodeFormat.POINT_OF_INITIATION_METHOD.getId(), CommonConstant.METHOD_STATIC);
 
         //Thong tin dinh danh nguoi thu huong (ID 38)
         LinkedHashMap<String, String> linkedHashMapAccountInfo = new LinkedHashMap<>();
@@ -205,7 +204,7 @@ public class QrService {
 
         //So tien giao dich
         if (!replaceComma(qrRequest.getData().getQrInfo().getTransAmount().trim()).isEmpty() && Long.parseLong(replaceComma(qrRequest.getData().getQrInfo().getTransAmount().trim())) >= 1000) {
-            linkedHashMapQRString.put(QRCodeFormat.POINT_OF_INITIATION_METHOD.getId(), CommonConstant.QRIBFT_DYNAMIC);
+            linkedHashMapQRString.put(QRCodeFormat.POINT_OF_INITIATION_METHOD.getId(), CommonConstant.METHOD_DYNAMIC);
             linkedHashMapQRString.put(QRCodeFormat.TRANSACTION_AMOUNT.getId(), replaceComma(qrRequest.getData().getQrInfo().getTransAmount().trim()));
         }
 
@@ -218,7 +217,7 @@ public class QrService {
 
         //thong tin bo sung
         if (!qrRequest.getData().getQrInfo().getAdditionInfo().trim().isEmpty()) {
-            linkedHashMapQRString.put(QRCodeFormat.POINT_OF_INITIATION_METHOD.getId(), CommonConstant.QRIBFT_DYNAMIC);
+            //linkedHashMapQRString.put(QRCodeFormat.POINT_OF_INITIATION_METHOD.getId(), CommonConstant.QRIBFT_DYNAMIC);
             LinkedHashMap<String, String> linkedHashMapAdditionInfo = new LinkedHashMap<>();
             linkedHashMapAdditionInfo.put(QRCodeFormat.PURPOSE_TRANSACTION.getId(), qrRequest.getData().getQrInfo().getAdditionInfo().trim());
             linkedHashMapQRString.put(QRCodeFormat.ADDITION_INFO.getId(), showKeyLengthValue(linkedHashMapAdditionInfo));
@@ -255,7 +254,15 @@ public class QrService {
         return qrImage;
     }
 
-    private String genQRImageTheme(String qr, GenerateQRRequest qrRequest) throws WriterException, IOException {
+    private boolean checkBankCode(String code) {
+        BankEntity bank = bankRepo.findByBin(code);
+        if (bank != null) {
+            return true;
+        }
+        return false;
+    }
+
+    private BufferedImage genQRImageTheme(String qr, GenerateQRRequest qrRequest) throws WriterException, IOException {
 
         BankEntity bank = bankRepo.findByBin(qrRequest.getHeader().getBkCd());
 
@@ -274,7 +281,7 @@ public class QrService {
 
         //them logo ngan hang vao baseImage
         int logoBankX = (baseImage.getWidth() - resizedLogoBank.getWidth()) / 2 + 110;
-        int logoBankY = (baseImage.getHeight() - resizedLogoBank.getHeight()) / 2 + 139;
+        int logoBankY = (baseImage.getHeight() - resizedLogoBank.getHeight()) / 2 + 145;
         baseImageGraphics.drawImage(resizedLogoBank, logoBankX, logoBankY, null);
 
         //them anh qr vao baseImage
@@ -337,9 +344,15 @@ public class QrService {
         addContentToImage(bankName, baseImage, fmY + 120, baseImageGraphics, fm);
 
         baseImageGraphics.dispose();
-        return genBase64FromImage(baseImage);
+        return baseImage;
     }
 
+    private String getQRNameFromQRText(String text) {
+        return text.substring(text.indexOf('<') + 1, text.indexOf('>'));
+    }
+
+
+    @Override
     public GenerateQRResponse genQRResponse(GenerateQRRequest qrRequest) throws IOException, WriterException {
 
         qrRequest.getHeader().setBrCd(CommonConstant.BRAND_CODE);
@@ -365,6 +378,9 @@ public class QrService {
         } else if (!CommonConstant.listServiceCode.contains(qrRequest.getData().getQrInfo().getServiceCode().toUpperCase().trim())) {
             generateQRResponse.getHeader().setErrCode(ErrorDefination.ERR_005.getErrCode());
             generateQRResponse.getHeader().setErrDesc(ErrorDefination.ERR_005.getDesc());
+        } else if (!checkBankCode(qrRequest.getHeader().getBkCd())) {
+            generateQRResponse.getHeader().setErrCode(ErrorDefination.ERR_007.getErrCode());
+            generateQRResponse.getHeader().setErrDesc(ErrorDefination.ERR_007.getDesc());
         } else {
 
             String qrString = genQRString(qrRequest) + genCRC(genQRString(qrRequest));
@@ -373,17 +389,24 @@ public class QrService {
                 generateQRResponse.getHeader().setErrCode(ErrorDefination.ERR_001.getErrCode());
                 generateQRResponse.getHeader().setErrDesc(ErrorDefination.ERR_001.getDesc());
             } else {
+                String qrThemeImage = genBase64FromImage(genQRImageTheme(qrString, qrRequest));
+
                 generateQRResponse.setData(data);
                 generateQRResponse.getData().setResponseCode(ErrorDefination.ERR_OOO.getErrCode());
                 generateQRResponse.getData().setResponseDesc(ErrorDefination.ERR_OOO.getDesc());
-                generateQRResponse.getData().setQrImage(genQRImageTheme(qrString, qrRequest));
+                generateQRResponse.getData().setQrImage(qrThemeImage);
                 generateQRResponse.getData().setQrString(qrString);
+
+                if (!qrRequest.getData().getCreatedUser().trim().isEmpty()) {
+                    createQREntity(qrRequest, null, "QRIBFT", genBase64FromImage(genQRImage(qrString)), qrThemeImage);
+                }
             }
 
         }
         return generateQRResponse;
     }
 
+    @Override
     public DeCodeQRResponse parseQRString(DeCodeQRRequest deCodeQRRequest) throws UnsupportedEncodingException {
 
         deCodeQRRequest.getHeader().setBrCd(CommonConstant.BRAND_CODE);
@@ -426,7 +449,10 @@ public class QrService {
             putHashMapAndCutQrString(QRCodeFormat.CONSUMER_ACCOUNT_INFO.getId() + "." + QRCodeFormat.MEMBER_BANKS.getId() + ".", linkedHashMapQRString, valueOfID38_01);
 
             String valueOfID62 = linkedHashMapQRString.get(QRCodeFormat.ADDITION_INFO.getId());
-            putHashMapAndCutQrString(QRCodeFormat.ADDITION_INFO.getId() + ".", linkedHashMapQRString, valueOfID62);
+            if (valueOfID62 != null) {
+                putHashMapAndCutQrString(QRCodeFormat.ADDITION_INFO.getId() + ".", linkedHashMapQRString, valueOfID62);
+                deCodeQRResponse.getData().getQrInfo().setAdditionInfo(linkedHashMapQRString.get(QRCodeFormat.ADDITION_INFO.getId() + "." + QRCodeFormat.PURPOSE_TRANSACTION.getId()));
+            }
 
 
             deCodeQRResponse.getData().setResponseCode(ErrorDefination.ERR_OOO.getErrCode());
@@ -436,7 +462,8 @@ public class QrService {
             deCodeQRResponse.getData().getQrInfo().setTransCurrency(linkedHashMapQRString.get(QRCodeFormat.TRANSACTION_CURRENCY.getId()));
             deCodeQRResponse.getData().getQrInfo().setTransAmount(linkedHashMapQRString.get(QRCodeFormat.TRANSACTION_AMOUNT.getId()));
             deCodeQRResponse.getData().getQrInfo().setCountryCode(linkedHashMapQRString.get(QRCodeFormat.COUNTRY_CODE.getId()));
-            deCodeQRResponse.getData().getQrInfo().setAdditionInfo(linkedHashMapQRString.get(QRCodeFormat.ADDITION_INFO.getId() + "." + QRCodeFormat.PURPOSE_TRANSACTION.getId()));
+
+
             deCodeQRResponse.getData().getQrInfo().setCrc(linkedHashMapQRString.get(QRCodeFormat.CRC.getId()));
 
             deCodeQRResponse.getHeader().setBkCd(linkedHashMapQRString.get(QRCodeFormat.CONSUMER_ACCOUNT_INFO.getId() + "." + QRCodeFormat.MEMBER_BANKS.getId() + "." + QRCodeFormat.BNB_ID.getId()));
@@ -447,6 +474,7 @@ public class QrService {
         return deCodeQRResponse;
     }
 
+    @Override
     public GenerateQRResponse genAdQR(GenerateAdQR qrRequest) throws IOException, WriterException {
 
         qrRequest.getHeader().setBrCd(CommonConstant.BRAND_CODE);
@@ -473,35 +501,140 @@ public class QrService {
             generateQRResponse.getData().setResponseDesc(ErrorDefination.ERR_OOO.getDesc());
 
             String qrString = qrRequest.getData().getQrInfo().getText().trim();
-            if (qrRequest.getData().getQrInfo().getAdType().trim().equals("URL")) {
-
-                generateQRResponse.getData().setQrImage(genBase64FromImage(genQRImage(qrString)));
-            } else {
+            String qrType = qrRequest.getData().getQrInfo().getAdType().trim();
+            String qrImage = genBase64FromImage(genQRImage(qrString));
 
 
-                String[] result = qrString.split("\\|");
-
-                List<String> list = Arrays.asList(result);
-                String htmlString = "<html><table>";
-
-                for (int i = 0; i < list.size() - 1; i++) {
-                    String myString = list.get(i);
-                    String label = myString.substring(myString.indexOf("[") + 1, myString.indexOf("]"));
-                    String value = myString.substring(myString.indexOf("<") + 1, myString.indexOf(">"));
-
-                    htmlString += "<tr><td><label>" + label + "</label></td>"
-                            + "<td><label>" + value + "</label></td></tr>";
-                }
-
-                htmlString += "</table></html>";
-
-                generateQRResponse.getData().setQrImage(genBase64FromImage(genQRImage(htmlString)));
-                generateQRResponse.getData().setQrString(htmlString);
+            generateQRResponse.getData().setQrImage(qrImage);
+            if (!qrRequest.getData().getCreatedUser().trim().isEmpty()) {
+                createQREntity(null, qrRequest, qrType, qrImage, null);
             }
 
 
         }
         return generateQRResponse;
+    }
+
+
+    private void createQREntity(GenerateQRRequest qrRequest, GenerateAdQR adQR, String qrType, String qrImage, String qrThemeImage) {
+        QRCodeEntity qrCodeEntity = new QRCodeEntity();
+
+        //header
+        if (qrRequest != null) {
+            qrCodeEntity.setBkCd(qrRequest.getHeader().getBkCd());
+            qrCodeEntity.setBrCd(qrRequest.getHeader().getBrCd());
+            qrCodeEntity.setTrnDt(qrRequest.getHeader().getTrnDt());
+            qrCodeEntity.setRefNo(qrRequest.getHeader().getRefNo());
+
+            //data
+            qrCodeEntity.setCreatedUser(qrRequest.getData().getCreatedUser());
+            qrCodeEntity.setChannel(qrRequest.getData().getChannel());
+
+
+            //qrInfoIBFT
+            qrCodeEntity.setServiceCode(qrRequest.getData().getQrInfo().getServiceCode());
+            qrCodeEntity.setCustomerId(qrRequest.getData().getQrInfo().getCustomerId());
+            qrCodeEntity.setCustomerName(qrRequest.getData().getQrInfo().getCustomerName());
+            qrCodeEntity.setTransCurrency(qrRequest.getData().getQrInfo().getTransCurrency());
+            qrCodeEntity.setCountryCode(qrRequest.getData().getQrInfo().getCountryCode());
+            qrCodeEntity.setTransAmount(qrRequest.getData().getQrInfo().getTransAmount());
+            qrCodeEntity.setAdditionInfo(qrRequest.getData().getQrInfo().getAdditionInfo());
+            qrCodeEntity.setMerchantCode(qrRequest.getData().getQrInfo().getMerchantCode());
+            qrCodeEntity.setMerchantName(qrRequest.getData().getQrInfo().getMerchantName());
+            qrCodeEntity.setMerchantCity(qrRequest.getData().getQrInfo().getMerchantCity());
+
+            qrCodeEntity.setQrName(qrRequest.getData().getQrInfo().getCustomerName());
+            qrCodeEntity.setQrThemeImage(qrThemeImage);
+        } else {
+            qrCodeEntity.setBkCd(adQR.getHeader().getBkCd());
+            qrCodeEntity.setBrCd(adQR.getHeader().getBrCd());
+            qrCodeEntity.setTrnDt(adQR.getHeader().getTrnDt());
+            qrCodeEntity.setRefNo(adQR.getHeader().getRefNo());
+
+            //data
+            qrCodeEntity.setCreatedUser(adQR.getData().getCreatedUser());
+            qrCodeEntity.setChannel(adQR.getData().getChannel());
+
+            //qrInfoAd
+            qrCodeEntity.setText(adQR.getData().getQrInfo().getText());
+
+            if (adQR.getData().getQrInfo().getAdType().equals("URL")) {
+                qrCodeEntity.setQrName(adQR.getData().getQrInfo().getText());
+            } else {
+                qrCodeEntity.setQrName(getQRNameFromQRText(adQR.getData().getQrInfo().getText()));
+            }
+        }
+
+        qrCodeEntity.setDirection(CommonConstant.DIRECTION);
+        qrCodeEntity.setReqResGb(CommonConstant.RES_GB);
+        qrCodeEntity.setQrType(qrType);
+
+        //result
+        qrCodeEntity.setQrImage(qrImage);
+        qrCodeEntity.setEnabled(true);
+        qrCodeEntity.setUpdateOn(LocalDateTime.now());
+
+        qrCodeRepo.save(qrCodeEntity);
+
+
+    }
+
+    public List<QRCodeEntity> getAllQRCodes() {
+        return qrCodeRepo.findAll();
+    }
+
+    public List<QrCodeDTORoleUser> finByCreatedUserRoleUser(String createdUser) {
+        return qrCodeRepo.findByCreatedUserRoleUser(createdUser);
+    }
+    public List<QrCodeDTORoleUser> findByCreatedUserAndEnabledFalseRoleUser(String createdUser) {
+        return qrCodeRepo.findByCreatedUserAndEnabledFalseRoleUser(createdUser);
+    }
+
+    public QRCodeEntity findByQrId(Long qrId) {
+        return qrCodeRepo.findByQrId(qrId);
+    }
+
+    public void disableQRCode(Long qrId) {
+
+        QRCodeEntity qrCodeEntity = qrCodeRepo.findByQrId(qrId);
+
+        qrCodeEntity.setEnabled(false);
+        qrCodeEntity.setUpdateOn(LocalDateTime.now());
+
+        qrCodeRepo.save(qrCodeEntity);
+
+    }
+
+    public void enableQRCode(Long qrId) {
+
+        QRCodeEntity qrCodeEntity = qrCodeRepo.findByQrId(qrId);
+
+        qrCodeEntity.setEnabled(true);
+        qrCodeEntity.setUpdateOn(LocalDateTime.now());
+
+        qrCodeRepo.save(qrCodeEntity);
+
+    }
+
+    public String getQrThemeImageById(Long id) {
+        return qrCodeRepo.getQrThemeImageById(id);
+    }
+
+    public QrCodeDTORoleUser getQrDTOById(Long id) {
+        return qrCodeRepo.getQrDTOById(id);
+    }
+
+    public void changeQRName(ChangeQRNameRequest changeQRNameRequest) {
+        QRCodeEntity qrCodeEntity = qrCodeRepo.findByQrId(changeQRNameRequest.getQrId());
+
+        qrCodeEntity.setQrName(changeQRNameRequest.getQrName().trim());
+
+
+        qrCodeRepo.save(qrCodeEntity);
+    }
+
+    public void deleteQR(Long id){
+        qrCodeRepo.deleteById(id);
     }
 
 

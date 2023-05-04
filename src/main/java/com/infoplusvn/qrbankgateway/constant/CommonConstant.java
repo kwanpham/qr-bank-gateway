@@ -7,8 +7,8 @@ import java.util.List;
 import java.util.Random;
 
 public class CommonConstant {
-    public static final String QRIBFT_STATIC = "11";
-    public static final String QRIBFT_DYNAMIC = "12";
+    public static final String METHOD_STATIC = "11";
+    public static final String METHOD_DYNAMIC = "12";
     public static final String LENGTH_CRC = "04";
     public static final String FONT_STYLE = "Arial";
     public static final String TITLE_SO_TIEN = "Số tiền: ";
@@ -28,6 +28,16 @@ public class CommonConstant {
     public static final String REFERENCE_NUMBER = genRefNo(genTrnDt());
 
     public static final String ROLE_USER = "USER";
+
+    public static final String STATUS_SUCCESS = "200";
+    public static final String STATUS_CREATE_SUCCESS = "201";
+    public static final String STATUS_ERR = "500";
+    public static final String STATUS_NOT_FOUND = "404";
+    public static final String MESSAGE_SUCCESS = "Success";
+    public static final String MESSAGE_UPDATED_SUCCESS = "Updated success";
+    public static final String MESSAGE_CREATED_SUCCESS = "Created success";
+    public static final String MESSAGE_DEACTIVATED_SUCCESS = "Deactivated success";
+    public static final String MESSAGE_CHANGED_SUCCESS = "Changed password success";
 
     private static String genTrnDt(){
         LocalDate currentDate = LocalDate.now();

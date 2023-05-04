@@ -2,7 +2,7 @@ package com.infoplusvn.qrbankgateway.filter;
 
 
 
-import com.infoplusvn.qrbankgateway.service.UserDetailsServiceImpl;
+import com.infoplusvn.qrbankgateway.service.impl.UserDetailsServiceImpl;
 import com.infoplusvn.qrbankgateway.util.JwtTokenUtil;
 import io.jsonwebtoken.ExpiredJwtException;
 import org.springframework.beans.factory.annotation.Autowired;

@@ -7,7 +7,7 @@ import org.springframework.data.repository.query.Param;
 
 public interface UserRepo extends JpaRepository<UserEntity, Long> {
 
-//    UserEntity findByUsername(String username);
+    UserEntity findByUsername(String username);
 
     UserEntity findByEmail(String email);
 
@@ -17,7 +17,7 @@ public interface UserRepo extends JpaRepository<UserEntity, Long> {
     String findMail(@Param("email") String email);
 
     @Query("SELECT t from UserEntity t where t.username = :username and t.enabled = true")
-    UserEntity findByUsername(@Param("username") String username);
+    UserEntity findByUsernameAndEnabled(@Param("username") String username);
 
 
 }

@@ -1,6 +1,6 @@
-package com.infoplusvn.qrbankgateway.dto.request;
+package com.infoplusvn.qrbankgateway.dto.request.qribft;
 
-import com.infoplusvn.qrbankgateway.dto.common.Header;
+import com.infoplusvn.qrbankgateway.dto.common.HeaderInfoGW;
 import lombok.Data;
 
 import javax.validation.Valid;
@@ -10,7 +10,7 @@ import javax.validation.constraints.NotBlank;
 public class DeCodeQRRequest {
 
     @Valid
-    private Header header;
+    private HeaderInfoGW header;
 
     @Valid
     private Data data;

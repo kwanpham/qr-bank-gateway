@@ -1,4 +1,4 @@
-package com.infoplusvn.qrbankgateway.dto.request;
+package com.infoplusvn.qrbankgateway.dto.response.user;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -7,13 +7,12 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class UserDTORegisterRequest {
+public class ChangePassword {
 
     private String username;
 
-    private String password;
+    private String oldPassword;
 
-    private String email;
-
+    private String newPassword;
 
 }

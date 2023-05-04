@@ -8,7 +8,7 @@ import org.hibernate.validator.constraints.Length;
 import javax.validation.constraints.*;
 
 @Data
-public class Header {
+public class HeaderInfoGW {
 
     @NotBlank
     @Length(min = 6 , max = 6)

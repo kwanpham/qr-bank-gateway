@@ -1,17 +1,19 @@
 package com.infoplusvn.qrbankgateway.controller;
 
-import com.infoplusvn.qrbankgateway.dto.common.UserDTORoleAdmin;
-import com.infoplusvn.qrbankgateway.dto.common.UserDTORoleUser;
-import com.infoplusvn.qrbankgateway.dto.request.UserDTORegisterRequest;
+import com.infoplusvn.qrbankgateway.constant.CommonConstant;
+import com.infoplusvn.qrbankgateway.dto.common.user.UserDTORoleAdmin;
+import com.infoplusvn.qrbankgateway.dto.common.user.UserDTORoleUser;
+import com.infoplusvn.qrbankgateway.dto.request.user.UserDTORegisterRequest;
+import com.infoplusvn.qrbankgateway.dto.response.user.ChangePassword;
 import com.infoplusvn.qrbankgateway.dto.response.DataResponse;
 import com.infoplusvn.qrbankgateway.entity.UserEntity;
+import com.infoplusvn.qrbankgateway.exception.ResourceNotFoundException;
 import com.infoplusvn.qrbankgateway.payload.JwtResponse;
-import com.infoplusvn.qrbankgateway.service.UserService;
+import com.infoplusvn.qrbankgateway.service.impl.UserServiceImpl;
 import com.infoplusvn.qrbankgateway.util.JwtTokenUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -41,13 +43,13 @@ public class UserController {
 
 
     @Autowired
-    private UserService userService;
+    private UserServiceImpl userService;
 
     @PostMapping("/oauth/token")
     public ResponseEntity<?> createAuthenticationToken(@RequestHeader("BasicAuth") String authorization) throws Exception {
 
         authorization = authorization.substring(6);
-//        log.info("authorization: {} " , authorization );
+        //log.info("authorization: {} " , authorization );
         byte[] decodedBytes = Base64.getDecoder().decode(authorization);
         String decodedString = new String(decodedBytes);
         String[] result = decodedString.split(":");
@@ -64,102 +66,154 @@ public class UserController {
 
 
     @GetMapping(value = "/getAllUsers")
-    public ResponseEntity<DataResponse> getAllUsers() {
-        try {
-            List<UserEntity> userEntityList = userService.getAllUsers();
-            List<UserDTORoleAdmin> listUserDTO = userService.getAllUsers().stream().map(UserEntity -> modelMapper.map(UserEntity, UserDTORoleAdmin.class))
-                    .collect(Collectors.toList());
+    public DataResponse getAllUsers() throws Exception {
+
+        List<UserEntity> userEntityList = userService.getAllUsers();
+        List<UserDTORoleAdmin> listUserDTO = userEntityList
+                .stream().map(UserEntity -> modelMapper.map(UserEntity, UserDTORoleAdmin.class))
+                .collect(Collectors.toList());
 
 
-            return ResponseEntity.ok().body(new DataResponse().setStatus("200").setMessage("Success").setData(listUserDTO));
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new DataResponse().setStatus("500").setMessage(ex.getMessage()).setData(null));
-        }
+        return new DataResponse().setStatus(CommonConstant.STATUS_SUCCESS)
+                .setMessage(CommonConstant.MESSAGE_SUCCESS)
+                .setData(listUserDTO);
+
     }
 
     @PostMapping(value = "/createUser")
-    public ResponseEntity<DataResponse> createUser(@RequestBody UserDTORegisterRequest userDTO) {
-        try {
+    public DataResponse createUser(@RequestBody UserDTORegisterRequest userDTO) throws Exception {
 
-            if (userService.getUserByUserName(userDTO.getUsername()) != null || userService.getUserByEmail(userDTO.getEmail()) != null) {
 
-                return ResponseEntity.ok().body(new DataResponse().setStatus("500").setMessage("Username hoặc Email đã được sử dụng").setData(null));
+        if (userService.getUserByUserNameRoleAdmin(userDTO.getUsername().trim()) != null
+                || userService.getUserByEmail(userDTO.getEmail().trim()) != null) {
 
-            } else {
-                UserEntity userEntity = userService.createUser(userDTO);
+            return new DataResponse().setStatus(CommonConstant.STATUS_ERR)
+                    .setMessage("Username hoặc Email đã được sử dụng")
+                    .setData(null);
 
-                return ResponseEntity.ok().body(new DataResponse().setStatus("201").setMessage("Created success").setData(null));
-            }
+        } else {
+            UserEntity userEntity = userService.createUser(userDTO);
 
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new DataResponse().setStatus("500").setMessage(ex.getMessage()).setData(null));
+            return new DataResponse().setStatus(CommonConstant.STATUS_CREATE_SUCCESS)
+                    .setMessage(CommonConstant.MESSAGE_CREATED_SUCCESS)
+                    .setData(null);
+
         }
+    }
+
+
+    @PutMapping(value = "/roleUserUpdateUser")
+    public DataResponse roleUserUpdateUser(@RequestBody UserDTORoleUser userDTO) throws Exception {
+
+        UserEntity getUserByEmail = userService.getUserByEmail(userDTO.getEmail().trim());
+        UserEntity getUserByUserName = userService.getUserByUserNameRoleUser(userDTO.getUsername().trim());
+
+        if (getUserByUserName == null) {
+
+            throw new ResourceNotFoundException("không tìm thấy tài khoản có username = " + userDTO.getUsername());
+
+
+        } else if (getUserByEmail != null && !getUserByEmail.getId().equals(getUserByUserName.getId())) {
+
+            return new DataResponse().setStatus(CommonConstant.STATUS_ERR)
+                    .setMessage("Email đã được sử dụng")
+                    .setData(null);
+
+        } else {
+
+            UserEntity userEntity = userService.roleUserUpdateUser(userDTO);
+            //UserDTORoleUser user = modelMapper.map(userEntity,UserDTORoleUser.class);
+            return new DataResponse().setStatus(CommonConstant.STATUS_SUCCESS)
+                    .setMessage(CommonConstant.MESSAGE_UPDATED_SUCCESS)
+                    .setData(null);
+        }
+
 
     }
 
 
-    @PutMapping(value = "/updateUser")
-    public ResponseEntity<DataResponse> updateUser(@RequestBody UserDTORoleUser userDTO) {
-        try {
-            UserEntity getUserByEmail = userService.getUserByEmail(userDTO.getEmail());
-            String myEmail = getUserByEmail.getEmail();
+    @PutMapping(value = "/roleAdminUpdateUser")
+    public DataResponse roleAdminUpdateUser(@RequestBody UserDTORoleAdmin userDTO) throws Exception {
 
-            if (userService.getUserByUserName(userDTO.getUsername()) == null) {
-                return ResponseEntity.ok().body(new DataResponse().setStatus("500").setMessage("không tìm thấy tài khoản có username = " + userDTO.getUsername()).setData(null));
-            } else if(getUserByEmail != null && myEmail != userDTO.getEmail()) {
-                return ResponseEntity.ok().body(new DataResponse().setStatus("500").setMessage("Email đã được sử dụng").setData(null));
-            }
-            else {
-                UserEntity userEntity = userService.roleUserUpdateUser(userDTO);
-                UserDTORoleUser user = modelMapper.map(userEntity,UserDTORoleUser.class);
+        if (userService.getUserByUserNameRoleAdmin(userDTO.getUsername().trim()) == null) {
 
-                return ResponseEntity.ok().body(new DataResponse().setStatus("200").setMessage("Updated success").setData(user));
-            }
+            throw new ResourceNotFoundException("không tìm thấy tài khoản có username = " + userDTO.getUsername());
 
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new DataResponse().setStatus("500").setMessage(ex.getMessage()).setData(null));
+
+        } else {
+
+            UserEntity userEntity = userService.roleAdminUpdateUser(userDTO);
+            UserDTORoleAdmin user = modelMapper.map(userEntity, UserDTORoleAdmin.class);
+
+            return new DataResponse().setStatus(CommonConstant.STATUS_SUCCESS)
+                    .setMessage(CommonConstant.MESSAGE_UPDATED_SUCCESS)
+                    .setData(user);
         }
-    }
-
-    @PutMapping(value = "/deactiveUser")
-    public ResponseEntity<DataResponse> deactiveUser(@RequestBody UserDTORoleAdmin userDTO) {
-        try {
-            if (userService.getUserByUserName(userDTO.getUsername()) == null) {
-                return ResponseEntity.ok().body(new DataResponse().setStatus("500").setMessage("không tìm thấy tài khoản có username = " + userDTO.getUsername()).setData(null));
-            } else {
-                UserEntity userEntity = userService.deactiveUser(userDTO);
-                UserDTORoleAdmin user = modelMapper.map(userEntity,UserDTORoleAdmin.class);
-
-                return ResponseEntity.ok().body(new DataResponse().setStatus("200").setMessage("Deactived success").setData(user));
-            }
 
 
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new DataResponse().setStatus("500").setMessage(ex.getMessage()).setData(null));
-        }
     }
 
     @GetMapping(value = "/getUserByUsername/{username}")
-    public ResponseEntity<DataResponse> getUserByUsername(@PathVariable String username) {
-        try {
-            UserEntity userEntity = userService.getUserByUserName(username);
-            if (userEntity == null) {
-                return ResponseEntity.ok().body(new DataResponse().setStatus("500").setMessage("không tìm thấy tài khoản có username = " + username).setData(null));
-            } else {
-                UserDTORoleUser userDTORoleUser = modelMapper.map(userEntity, UserDTORoleUser.class);
-                return ResponseEntity.ok().body(new DataResponse().setStatus("200").setMessage("Success").setData(userDTORoleUser));
-            }
+    public DataResponse getUserByUsername(@PathVariable String username) throws Exception {
 
+        UserEntity userEntity = userService.getUserByUserNameRoleUser(username);
+        if (userEntity == null) {
 
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new DataResponse().setStatus("500").setMessage(ex.getMessage()).setData(null));
+            throw new ResourceNotFoundException("không tìm thấy tài khoản có username = " + username);
+
+        } else {
+            UserDTORoleUser userDTORoleUser = modelMapper.map(userEntity, UserDTORoleUser.class);
+            return new DataResponse().setStatus(CommonConstant.STATUS_SUCCESS)
+                    .setMessage("Success")
+                    .setData(userDTORoleUser);
         }
+
     }
 
+
+    @GetMapping(value = "/getAllUsername")
+    public DataResponse getAllUsername() throws Exception {
+
+        List<String> list = userService.getAllUsername();
+        return new DataResponse().setStatus(CommonConstant.STATUS_SUCCESS)
+                .setMessage(CommonConstant.MESSAGE_SUCCESS)
+                .setData(list);
+
+    }
+
+    @GetMapping(value = "/getAllEmail")
+    public DataResponse getAllEmail() throws Exception {
+
+        List<String> list = userService.getAllEmail();
+        return new DataResponse().setStatus(CommonConstant.STATUS_SUCCESS)
+                .setMessage(CommonConstant.MESSAGE_SUCCESS)
+                .setData(list);
+
+    }
+
+
+    @PutMapping(value = "/changePassword")
+    public DataResponse changePassword(@RequestBody ChangePassword changePassword) throws Exception {
+
+        UserEntity userEntity = userService.getUserByUserNameRoleUser(changePassword.getUsername().trim());
+        if (userEntity == null) {
+            throw new ResourceNotFoundException("không tìm thấy tài khoản có username = " + changePassword.getUsername());
+        } else {
+
+            if (!userService.checkPassword(userEntity.getPassword(), changePassword.getOldPassword())) {
+                return new DataResponse().setStatus(CommonConstant.STATUS_ERR)
+                        .setMessage("Mật khẩu cũ không đúng")
+                        .setData(null);
+
+            } else {
+                userService.changePassword(changePassword);
+                return new DataResponse().setStatus(CommonConstant.STATUS_SUCCESS)
+                        .setMessage(CommonConstant.MESSAGE_CHANGED_SUCCESS)
+                        .setData(null);
+            }
+        }
+
+
+    }
 
 }
