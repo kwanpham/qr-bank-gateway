@@ -1,35 +1,21 @@
 package com.infoplusvn.qrbankgateway.service.impl;
 
-import com.beust.ah.A;
-import com.infoplusvn.qrbankgateway.constant.CommonConstant;
 import com.infoplusvn.qrbankgateway.constant.ErrorDefination;
 import com.infoplusvn.qrbankgateway.constant.QRCodeFormat;
 import com.infoplusvn.qrbankgateway.dto.common.HeaderInfoGW;
-import com.infoplusvn.qrbankgateway.dto.common.HeaderNAPAS;
 import com.infoplusvn.qrbankgateway.dto.request.lookup_ben.LookupBenReqInfoGW;
 import com.infoplusvn.qrbankgateway.dto.request.lookup_ben.LookupBenReqNAPAS;
 import com.infoplusvn.qrbankgateway.dto.response.lookup_ben.LookupBenResInfoGW;
 import com.infoplusvn.qrbankgateway.dto.response.lookup_ben.LookupBenResNAPAS;
-import com.infoplusvn.qrbankgateway.entity.PaymentDetailsEntity;
-import com.infoplusvn.qrbankgateway.entity.PaymentEntity;
 import com.infoplusvn.qrbankgateway.exception.ValidationHelper;
-import com.infoplusvn.qrbankgateway.repo.PaymentDetailsRepo;
-import com.infoplusvn.qrbankgateway.repo.PaymentRepo;
 import com.infoplusvn.qrbankgateway.service.QRLookupBenService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
-import org.apache.http.client.HttpClient;
-import org.apache.http.impl.client.HttpClientBuilder;
-import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 
 import java.io.UnsupportedEncodingException;
-import java.net.URL;
-import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 
 @Slf4j
@@ -38,242 +24,6 @@ public class QRLookupBenServiceImpl implements QRLookupBenService {
 
     @Autowired
     QrIBTFServiceImpl qrIBTFService;
-
-    @Autowired
-    PaymentRepo paymentRepo;
-
-    @Autowired
-    PaymentDetailsRepo paymentDetailsRepo;
-
-
-    private void createPayment(LookupBenResInfoGW lookupBenResInfoGW,String paymentType){
-
-        PaymentEntity paymentEntity = new PaymentEntity();
-
-        paymentEntity.setRefNo(lookupBenResInfoGW.getHeader().getRefNo());
-        paymentEntity.setDirection(lookupBenResInfoGW.getHeader().getDirection());
-        paymentEntity.setPaymentType(paymentType);
-        paymentEntity.setOriginatingInstitutionId(lookupBenResInfoGW.getHeader().getBkCd());
-        paymentEntity.setReceivingInstitutionId(lookupBenResInfoGW.getData().getParticipant().getReceivingInstitutionId());
-        paymentEntity.setCardAcceptorName(lookupBenResInfoGW.getData().getParticipant().getCardAcceptorName());
-        paymentEntity.setMerchantCategoryCode(lookupBenResInfoGW.getData().getParticipant().getMerchantCategoryCode());
-        paymentEntity.setCardAcceptorCountry(lookupBenResInfoGW.getData().getParticipant().getCardAcceptorCountry());
-        paymentEntity.setMerchantId(lookupBenResInfoGW.getData().getParticipant().getMerchantId());
-        paymentEntity.setAmount(lookupBenResInfoGW.getData().getAmount());
-        paymentEntity.setCurrency(lookupBenResInfoGW.getData().getCurrency());
-        paymentEntity.setBillNumber(lookupBenResInfoGW.getData().getOrder().getBillNumber());
-        paymentEntity.setCreatedOn(LocalDateTime.now());
-        paymentEntity.setResponseCode(lookupBenResInfoGW.getData().getResponseCode());
-        paymentEntity.setResponseDesc(lookupBenResInfoGW.getData().getResponseDesc());
-
-        paymentRepo.save(paymentEntity);
-
-    }
-
-    private void createPaymentDetail(String refNo,String start,String end,LookupBenReqNAPAS lookupBenReqNAPAS, LookupBenReqInfoGW lookupBenReqInfoGW, LookupBenResInfoGW lookupBenResInfoGW, LookupBenResNAPAS lookupBenResNAPAS){
-
-        PaymentDetailsEntity paymentDetail = new PaymentDetailsEntity();
-
-        paymentDetail.setRefNo(refNo);
-        paymentDetail.setStart(start);
-        paymentDetail.setEnd(end);
-
-
-        if(lookupBenReqNAPAS != null){
-            paymentDetail.setRequestorId(lookupBenReqNAPAS.getHeader().getRequestor().getId());
-            paymentDetail.setRequestorName(lookupBenReqNAPAS.getHeader().getRequestor().getName());
-
-            paymentDetail.setReqResGb(lookupBenReqNAPAS.getHeader().getOperation());
-            paymentDetail.setSignature(lookupBenReqNAPAS.getHeader().getSignature());
-
-            paymentDetail.setQrString(lookupBenReqNAPAS.getPayload().getQr_string());
-        }
-
-        if(lookupBenReqInfoGW != null) {
-            //header
-            paymentDetail.setBkCd(lookupBenReqInfoGW.getHeader().getBkCd());
-            paymentDetail.setBrCd(lookupBenReqInfoGW.getHeader().getBrCd());
-            paymentDetail.setTrnDt(lookupBenReqInfoGW.getHeader().getTrnDt());
-            paymentDetail.setReqResGb(lookupBenReqInfoGW.getHeader().getReqResGb());
-            paymentDetail.setErrCode(lookupBenReqInfoGW.getHeader().getErrCode());
-            paymentDetail.setErrDesc(lookupBenReqInfoGW.getHeader().getErrDesc());
-
-            //data
-            paymentDetail.setChannel(lookupBenReqInfoGW.getData().getChannel());
-
-            //payment
-            paymentDetail.setPaymentGenerationMethod(lookupBenReqInfoGW.getData().getPayment().getGenerationMethod());
-            paymentDetail.setPaymentIndicator(lookupBenReqInfoGW.getData().getPayment().getIndicator());
-            paymentDetail.setPaymentFeeFixed(lookupBenReqInfoGW.getData().getPayment().getFeeFixed());
-            paymentDetail.setPaymentFeePercentage(lookupBenReqInfoGW.getData().getPayment().getFeePercentage());
-            paymentDetail.setPaymentEndToEndReference(lookupBenReqInfoGW.getData().getPayment().getEndToEndReference());
-
-            //data
-            paymentDetail.setAmount(lookupBenReqInfoGW.getData().getAmount());
-            paymentDetail.setCurrency(lookupBenReqInfoGW.getData().getCurrency());
-
-            //participant
-            paymentDetail.setParticipantOriginatingInstitutionId(lookupBenReqInfoGW.getData().getParticipant().getOriginatingInstitutionId());
-            paymentDetail.setParticipantReceivingInstitutionId(lookupBenReqInfoGW.getData().getParticipant().getReceivingInstitutionId());
-            paymentDetail.setParticipantMerchantId(lookupBenReqInfoGW.getData().getParticipant().getMerchantId());
-            paymentDetail.setParticipantMerchantCategoryCode(lookupBenReqInfoGW.getData().getParticipant().getMerchantCategoryCode());
-            paymentDetail.setParticipantCardAcceptorName(lookupBenReqInfoGW.getData().getParticipant().getCardAcceptorName());
-            paymentDetail.setParticipantCardAcceptorCity(lookupBenReqInfoGW.getData().getParticipant().getCardAcceptorCity());
-            paymentDetail.setParticipantCardAcceptorCountry(lookupBenReqInfoGW.getData().getParticipant().getCardAcceptorCountry());
-            paymentDetail.setParticipantCardPostalCode(lookupBenReqInfoGW.getData().getParticipant().getCardPostalCode());
-            paymentDetail.setParticipantCardLanguagePreference(lookupBenReqInfoGW.getData().getParticipant().getCardLanguagePreference());
-            paymentDetail.setParticipantCardNameAlternateLanguage(lookupBenReqInfoGW.getData().getParticipant().getCardNameAlternateLanguage());
-            paymentDetail.setParticipantCityAlternateLanguage(lookupBenReqInfoGW.getData().getParticipant().getCardCityAlternateLanguage());
-            paymentDetail.setParticipantCardPaymentSystemSpecific(lookupBenReqInfoGW.getData().getParticipant().getCardPaymentSystemSpecific());
-
-            //data
-            paymentDetail.setRecipientAccount(lookupBenReqInfoGW.getData().getRecipientAccount());
-
-            //order
-            paymentDetail.setOrderBillNumber(lookupBenReqInfoGW.getData().getOrder().getBillNumber());
-            paymentDetail.setOrderMobileNumber(lookupBenReqInfoGW.getData().getOrder().getMobileNumber());
-            paymentDetail.setOrderStoreLabel(lookupBenReqInfoGW.getData().getOrder().getStoreLabel());
-            paymentDetail.setOrderLoyaltyNumber(lookupBenReqInfoGW.getData().getOrder().getLoyaltyNumber());
-            paymentDetail.setOrderReferenceLabel(lookupBenReqInfoGW.getData().getOrder().getReferenceLabel());
-            paymentDetail.setOrderCustomerLabel(lookupBenReqInfoGW.getData().getOrder().getCustomerLabel());
-            paymentDetail.setOrderTerminalLabel(lookupBenReqInfoGW.getData().getOrder().getTerminalLabel());
-            paymentDetail.setOrderPurposeOfTrans(lookupBenReqInfoGW.getData().getOrder().getPurposeOfTrans());
-            paymentDetail.setOrderAdditionConsumerData(lookupBenReqInfoGW.getData().getOrder().getAdditionConsumerData());
-        }
-
-        if(lookupBenResInfoGW != null) {
-            paymentDetail.setBkCd(lookupBenResInfoGW.getHeader().getBkCd());
-            paymentDetail.setBrCd(lookupBenResInfoGW.getHeader().getBrCd());
-            paymentDetail.setTrnDt(lookupBenResInfoGW.getHeader().getTrnDt());
-            paymentDetail.setReqResGb(lookupBenResInfoGW.getHeader().getReqResGb());
-            paymentDetail.setErrCode(lookupBenResInfoGW.getHeader().getErrCode());
-            paymentDetail.setErrDesc(lookupBenResInfoGW.getHeader().getErrDesc());
-
-            //data
-            paymentDetail.setResponseCode(lookupBenResInfoGW.getData().getResponseCode());
-            paymentDetail.setResponseDesc(lookupBenResInfoGW.getData().getResponseDesc());
-            paymentDetail.setFundingReference(lookupBenResInfoGW.getData().getFundingReference());
-
-            //payment
-            paymentDetail.setPaymentGenerationMethod(lookupBenResInfoGW.getData().getPayment().getGenerationMethod());
-            paymentDetail.setPaymentIndicator(lookupBenResInfoGW.getData().getPayment().getIndicator());
-            paymentDetail.setPaymentTrace(lookupBenResInfoGW.getData().getPayment().getTrace());
-            paymentDetail.setPaymentExchangeRate(lookupBenResInfoGW.getData().getPayment().getExchangeRate());
-            paymentDetail.setPaymentFeeFixed(lookupBenResInfoGW.getData().getPayment().getFeeFixed());
-            paymentDetail.setPaymentFeePercentage(lookupBenResInfoGW.getData().getPayment().getFeePercentage());
-
-            //data
-            paymentDetail.setAmount(lookupBenResInfoGW.getData().getAmount());
-            paymentDetail.setCurrency(lookupBenResInfoGW.getData().getCurrency());
-
-            //participant
-            paymentDetail.setParticipantMerchantId(lookupBenResInfoGW.getData().getParticipant().getMerchantId());
-            paymentDetail.setParticipantReceivingInstitutionId(lookupBenResInfoGW.getData().getParticipant().getReceivingInstitutionId());
-            paymentDetail.setParticipantMerchantCategoryCode(lookupBenResInfoGW.getData().getParticipant().getMerchantCategoryCode());
-            paymentDetail.setParticipantCardAcceptorId(lookupBenResInfoGW.getData().getParticipant().getCardAcceptorId());
-            paymentDetail.setParticipantCardAcceptorCountry(lookupBenResInfoGW.getData().getParticipant().getCardAcceptorCountry());
-            paymentDetail.setParticipantCardAcceptorName(lookupBenResInfoGW.getData().getParticipant().getCardAcceptorName());
-            paymentDetail.setParticipantCardAcceptorCity(lookupBenResInfoGW.getData().getParticipant().getCardAcceptorCity());
-
-            //data
-            paymentDetail.setRecipientAccount(lookupBenResInfoGW.getData().getRecipientAccount());
-
-            //recipient
-            paymentDetail.setRecipientFullName(lookupBenResInfoGW.getData().getRecipient().getFullName());
-            paymentDetail.setRecipientDob(lookupBenResInfoGW.getData().getRecipient().getDob());
-
-            //address
-            paymentDetail.setAddressLine1(lookupBenResInfoGW.getData().getRecipient().getAddress().getLine1());
-            paymentDetail.setAddressLine2(lookupBenResInfoGW.getData().getRecipient().getAddress().getLine2());
-            paymentDetail.setAddressCountry(lookupBenResInfoGW.getData().getRecipient().getAddress().getCountry());
-            paymentDetail.setAddressPhone(lookupBenResInfoGW.getData().getRecipient().getAddress().getPhone());
-
-            //order
-            paymentDetail.setOrderBillNumber(lookupBenResInfoGW.getData().getOrder().getBillNumber());
-            paymentDetail.setOrderMobileNumber(lookupBenResInfoGW.getData().getOrder().getMobileNumber());
-            paymentDetail.setOrderStoreLabel(lookupBenResInfoGW.getData().getOrder().getStoreLabel());
-            paymentDetail.setOrderLoyaltyNumber(lookupBenResInfoGW.getData().getOrder().getLoyaltyNumber());
-            paymentDetail.setOrderReferenceLabel(lookupBenResInfoGW.getData().getOrder().getReferenceLabel());
-            paymentDetail.setOrderCustomerLabel(lookupBenResInfoGW.getData().getOrder().getCustomerLabel());
-            paymentDetail.setOrderTerminalLabel(lookupBenResInfoGW.getData().getOrder().getTerminalLabel());
-            paymentDetail.setOrderPurposeOfTrans(lookupBenResInfoGW.getData().getOrder().getPurposeOfTrans());
-            paymentDetail.setOrderAdditionConsumerData(lookupBenResInfoGW.getData().getOrder().getAdditionConsumerData());
-
-        }
-        if(lookupBenResNAPAS != null){
-            //header
-            paymentDetail.setRequestorId(lookupBenResNAPAS.getHeader().getRequestor().getId());
-            paymentDetail.setRequestorName(lookupBenResNAPAS.getHeader().getRequestor().getName());
-
-            paymentDetail.setReqResGb(lookupBenResNAPAS.getHeader().getOperation());
-            paymentDetail.setSignature(lookupBenResNAPAS.getHeader().getSignature());
-
-            //result
-            paymentDetail.setResponseCode(lookupBenResNAPAS.getResult().getCode());
-            paymentDetail.setResponseDesc(lookupBenResNAPAS.getResult().getMessage());
-
-            //payment
-            paymentDetail.setPaymentGenerationMethod(lookupBenResNAPAS.getPayload().getPayment().getGeneration_method());
-            paymentDetail.setPaymentExchangeRate(lookupBenResNAPAS.getPayload().getPayment().getExchange_rate());
-            paymentDetail.setPaymentIndicator(lookupBenResNAPAS.getPayload().getPayment().getIndicator());
-            paymentDetail.setPaymentFeeFixed(lookupBenResNAPAS.getPayload().getPayment().getFee_fixed());
-            paymentDetail.setPaymentFeePercentage(lookupBenResNAPAS.getPayload().getPayment().getFee_percentage());
-            paymentDetail.setPaymentEndToEndReference(lookupBenResNAPAS.getPayload().getPayment().getEnd_to_end_reference());
-
-            //payload
-            paymentDetail.setAmount(lookupBenResNAPAS.getPayload().getAmount());
-            paymentDetail.setCurrency(lookupBenResNAPAS.getPayload().getCurrency());
-
-            //participant
-            paymentDetail.setParticipantOriginatingInstitutionId(lookupBenResNAPAS.getPayload().getParticipant().getOriginating_institution_id());
-            paymentDetail.setParticipantReceivingInstitutionId(lookupBenResNAPAS.getPayload().getParticipant().getReceiving_institution_id());
-            paymentDetail.setParticipantMerchantId(lookupBenResNAPAS.getPayload().getParticipant().getMerchant_id());
-            paymentDetail.setParticipantMerchantCategoryCode(lookupBenResNAPAS.getPayload().getParticipant().getMerchant_category_code());
-            paymentDetail.setParticipantCardAcceptorId(lookupBenResNAPAS.getPayload().getParticipant().getCard_acceptor_id());
-            paymentDetail.setParticipantCardAcceptorName(lookupBenResNAPAS.getPayload().getParticipant().getCard_acceptor_name());
-            paymentDetail.setParticipantCardAcceptorCity(lookupBenResNAPAS.getPayload().getParticipant().getCard_acceptor_city());
-            paymentDetail.setParticipantCardAcceptorCountry(lookupBenResNAPAS.getPayload().getParticipant().getCard_acceptor_country());
-            paymentDetail.setParticipantCardPostalCode(lookupBenResNAPAS.getPayload().getParticipant().getCard_postal_code());
-            paymentDetail.setParticipantCardLanguagePreference(lookupBenResNAPAS.getPayload().getParticipant().getCard_language_preference());
-            paymentDetail.setParticipantCardNameAlternateLanguage(lookupBenResNAPAS.getPayload().getParticipant().getCard_name_alternate_language());
-            paymentDetail.setParticipantCityAlternateLanguage(lookupBenResNAPAS.getPayload().getParticipant().getCity_alternate_language());
-            paymentDetail.setParticipantCardPaymentSystemSpecific(lookupBenResNAPAS.getPayload().getParticipant().getCard_payment_system_specific());
-
-            //payload
-            paymentDetail.setRecipientAccount(lookupBenResNAPAS.getPayload().getRecipient_account());
-
-            //recipient
-            paymentDetail.setRecipientFullName(lookupBenResNAPAS.getPayload().getRecipient().getFull_name());
-            paymentDetail.setRecipientDob(lookupBenResNAPAS.getPayload().getRecipient().getDate_of_birth());
-
-            //address
-            paymentDetail.setAddressLine1(lookupBenResNAPAS.getPayload().getRecipient().getAddress().getLine1());
-            paymentDetail.setAddressLine2(lookupBenResNAPAS.getPayload().getRecipient().getAddress().getLine2());
-            paymentDetail.setAddressCity(lookupBenResNAPAS.getPayload().getRecipient().getAddress().getCity());
-            paymentDetail.setAddressCountrySubdivision(lookupBenResNAPAS.getPayload().getRecipient().getAddress().getCountry_subdivision());
-            paymentDetail.setAddressPostalCode(lookupBenResNAPAS.getPayload().getRecipient().getAddress().getPostal_code());
-            paymentDetail.setAddressCountry(lookupBenResNAPAS.getPayload().getRecipient().getAddress().getCountry());
-            paymentDetail.setAddressPhone(lookupBenResNAPAS.getPayload().getRecipient().getAddress().getPhone());
-            paymentDetail.setAddressEmail(lookupBenResNAPAS.getPayload().getRecipient().getAddress().getEmail());
-
-            //additionalMessage
-
-            //orderInfo
-            paymentDetail.setOrderBillNumber(lookupBenResNAPAS.getOrder_info().getBill_number());
-            paymentDetail.setOrderMobileNumber(lookupBenResNAPAS.getOrder_info().getMobile_number());
-            paymentDetail.setOrderStoreLabel(lookupBenResNAPAS.getOrder_info().getStore_label());
-            paymentDetail.setOrderLoyaltyNumber(lookupBenResNAPAS.getOrder_info().getLoyalty_number());
-            paymentDetail.setOrderCustomerLabel(lookupBenResNAPAS.getOrder_info().getCustomer_label());
-            paymentDetail.setOrderTerminalLabel(lookupBenResNAPAS.getOrder_info().getTerminal_label());
-            paymentDetail.setOrderPurposeOfTrans(lookupBenResNAPAS.getOrder_info().getTransaction_purpose());
-            paymentDetail.setOrderAdditionConsumerData(lookupBenResNAPAS.getOrder_info().getAdditional_data_request());
-
-        }
-
-
-        paymentDetailsRepo.save(paymentDetail);
-    }
-
 
     private LookupBenReqInfoGW genMappingReqInfoGW(LookupBenReqNAPAS lookupBenReqNAPAS) {
 
@@ -322,7 +72,7 @@ public class QRLookupBenServiceImpl implements QRLookupBenService {
             qrIBTFService.putHashMapAndCutQrString("64" + ".", linkedHashMapQRString, valueOfID64);
         }
 
-        //log.info("LinkedHashMap" + linkedHashMapQRString);
+        log.info("LinkedHashMap" + linkedHashMapQRString);
 
 
         //data.payment
@@ -712,28 +462,6 @@ public class QRLookupBenServiceImpl implements QRLookupBenService {
 
                     log.info("STEP 4: InfoGW -> NAPAS: " + lookupBenResNAPAS);
 
-                    //luu vao csdl
-//                    createLookupBenEntity(lookupBenResInfoGW);
-//
-//                    createReqNAPAS(lookupBenReqNAPAS);
-//
-//                    createReqGW(lookupBenReqInfoGWMapping);
-//
-//                    createResGW(lookupBenResInfoGW);
-//
-//                    createResNAPAS(lookupBenResNAPAS);
-
-//                    String refNo = lookupBenResInfoGW.getHeader().getRefNo();
-
-//                    createPayment(lookupBenResInfoGW,"Lookup");
-
-//                    createPaymentDetail(refNo, "NAPAS","InfoGW",lookupBenReqNAPAS, null,null,null);
-//
-//                    createPaymentDetail(refNo, "InfoGW","Bank",null, lookupBenReqInfoGWMapping,null,null);
-//
-//                    createPaymentDetail(refNo, "Bank","InfoGW",null, null,lookupBenResInfoGW,null);
-//
-//                    createPaymentDetail(refNo, "InfoGW","NAPAS",null, null,null,lookupBenResNAPAS);
                 }
 
             } catch (Exception ex) {

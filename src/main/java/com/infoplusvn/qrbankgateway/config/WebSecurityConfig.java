@@ -52,7 +52,9 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                         "/infogw/qr/v1/genQR",
                         "/infogw/qr/v1/getAllUsername",
                         "/infogw/qr/v1/getAllEmail",
-                        "/infogw/qr/v1/createUser")
+                        "/infogw/qr/v1/createUser",
+                        "/infogw/qr/v1/issuer/payment",
+                        "/infogw/qr/v1/ben/lookup")
                 .permitAll()
                 .anyRequest().authenticated().and()
                 .exceptionHandling().authenticationEntryPoint(jwtAuthenticationEntryPoint).and()
