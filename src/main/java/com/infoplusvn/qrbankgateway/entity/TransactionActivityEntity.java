@@ -1,5 +1,8 @@
 package com.infoplusvn.qrbankgateway.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -30,7 +33,10 @@ public class TransactionActivityEntity {
 
     private String activityStepStatus;
 
+    //    @ManyToOne
+//    @JoinColumn(name = "transaction_id", nullable = false)
     @ManyToOne
     @JoinColumn(name = "transaction_id", nullable = false)
+    @JsonIgnore
     private TransactionEntity transaction;
 }

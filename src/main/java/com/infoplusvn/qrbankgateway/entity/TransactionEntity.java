@@ -1,5 +1,8 @@
 package com.infoplusvn.qrbankgateway.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -31,7 +34,6 @@ public class TransactionEntity {
 
     private String channel;
 
-    @Column(unique = true)
     private String direction;
 
     private String transStep;
@@ -46,7 +48,6 @@ public class TransactionEntity {
 
     private String serviceCode;
 
-    @Column(unique = true)
     private String senderBank;
 
     private String receiverBank;
@@ -63,7 +64,17 @@ public class TransactionEntity {
 
     private LocalDateTime sentDt;
 
-    @OneToMany(mappedBy = "transaction")
+    private String type;
+
+    private String billNumber;
+
+    private String organizationName;
+
+    private String country;
+
+    //@OneToMany(mappedBy = "transaction")
+    @OneToMany(mappedBy = "transaction", cascade = CascadeType.ALL)
+    @JsonIgnore
     private Set<TransactionActivityEntity> transactionActivity;
 
 
