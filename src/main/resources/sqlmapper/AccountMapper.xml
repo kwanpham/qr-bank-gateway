@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.core_bank.repository.AccountRepo">
+
+
+
+
+    <select id="findUserAccount" resultType="com.infoplusvn.qrbankgateway.dto.request.GenerateQRRequest">
+        select u.first_name,u.last_name,a.account_number from user u join app_account a on u.id = a.user_id where u.username = #{userName}
+    </select>
+
+
+    <sql id="searchByAccountSearch">
+        where 1 = 1
+        <if test="fromAmount != null">
+            AND a.AMOUNT >= #{fromAmount}
+        </if>
+
+        <if test="toAmount != null">
+            AND a.AMOUNT &lt;= #{toAmount}
+        </if>
+
+    </sql>
+
+<!--     Tim kiem-->
+
+
+
+</mapper>
