@@ -22,7 +22,9 @@ public class CommonConstant {
 
     public static final String BRAND_CODE = "HN";
     public static final String TRANSACTION_DATE = genTrnDt();
-    public static final String DIRECTION = "O";
+    public static final String DIRECTION_OUTBOUND = "O";;
+    public static final String DIRECTION_INBOUND = "I";
+    public static final String CARD_ACCEPTOR_CITY = "HANOI";
     public static final String REQ_GB = "REQ";
     public static final String RES_GB = "RES";
     public static final String REFERENCE_NUMBER = genRefNo(genTrnDt());

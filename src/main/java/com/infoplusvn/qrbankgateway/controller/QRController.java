@@ -6,17 +6,12 @@ import com.infoplusvn.qrbankgateway.dto.request.GenerateAdQR;
 import com.infoplusvn.qrbankgateway.dto.request.GenerateQRRequest;
 import com.infoplusvn.qrbankgateway.dto.response.DeCodeQRResponse;
 import com.infoplusvn.qrbankgateway.dto.response.GenerateQRResponse;
-import com.infoplusvn.qrbankgateway.entity.BankEntity;
-import com.infoplusvn.qrbankgateway.service.BankService;
 import com.infoplusvn.qrbankgateway.service.QrService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.util.List;
 
 @CrossOrigin(origins = "*")
 @RestController

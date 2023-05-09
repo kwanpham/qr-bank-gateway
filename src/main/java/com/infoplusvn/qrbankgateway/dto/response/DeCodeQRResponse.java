@@ -1,15 +1,12 @@
 package com.infoplusvn.qrbankgateway.dto.response;
 
-import com.infoplusvn.qrbankgateway.dto.common.Header;
+import com.infoplusvn.qrbankgateway.dto.common.Header.HeaderGW;
 import lombok.Data;
-
-import javax.validation.Valid;
-import javax.validation.constraints.NotBlank;
 
 @Data
 public class DeCodeQRResponse {
 
-    private Header header;
+    private HeaderGW headerGW;
 
     private Data data;
 

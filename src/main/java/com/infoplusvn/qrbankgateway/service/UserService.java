@@ -1,6 +1,7 @@
 package com.infoplusvn.qrbankgateway.service;
 
 import com.infoplusvn.qrbankgateway.constant.CommonConstant;
+import com.infoplusvn.qrbankgateway.dto.UserAccountInfo;
 import com.infoplusvn.qrbankgateway.dto.common.UserDTORoleAdmin;
 import com.infoplusvn.qrbankgateway.dto.common.UserDTORoleUser;
 import com.infoplusvn.qrbankgateway.dto.request.UserDTORegisterRequest;
@@ -19,7 +20,6 @@ public class UserService {
     @Autowired
     private UserRepo userRepo;
 
-
     @Autowired
     private PasswordEncoder passwordEncoder;
 
@@ -28,9 +28,12 @@ public class UserService {
         return userRepo.findAll();
     }
 
+    public UserAccountInfo findUserAccountInfo(String userName){
+        return userRepo.findUserAccountInfo(userName);
+    }
+
     public UserEntity createUser(UserDTORegisterRequest userRequest) {
         UserEntity userEntity = new UserEntity();
-
         userEntity.setUsername(userRequest.getUsername());
         userEntity.setPassword(passwordEncoder.encode(userRequest.getPassword()));
         userEntity.setEmail(userRequest.getEmail());

@@ -1,5 +1,6 @@
 package com.infoplusvn.qrbankgateway.repo;
 
+import com.infoplusvn.qrbankgateway.dto.UserAccountInfo;
 import com.infoplusvn.qrbankgateway.entity.UserEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -20,4 +21,6 @@ public interface UserRepo extends JpaRepository<UserEntity, Long> {
     UserEntity findByUsername(@Param("username") String username);
 
 
+    @Query("SELECT u.firstName AS firstName, u.lastName AS lastName, a.accountNumber AS accountNumber FROM UserEntity u JOIN AccountEntity a ON u.id = a.userId WHERE u.username = :userName")
+    UserAccountInfo findUserAccountInfo(@Param("userName") String userName);
 }

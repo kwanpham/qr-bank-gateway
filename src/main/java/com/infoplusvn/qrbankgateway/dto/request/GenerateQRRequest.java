@@ -1,20 +1,17 @@
 package com.infoplusvn.qrbankgateway.dto.request;
 
-import com.infoplusvn.qrbankgateway.dto.common.Header;
-import lombok.AllArgsConstructor;
+import com.infoplusvn.qrbankgateway.dto.common.Header.HeaderGW;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
 
 @Data
 public class GenerateQRRequest {
 
     @Valid
-    private Header header;
+    private HeaderGW headerGW;
 
     @Valid
     private Data data;

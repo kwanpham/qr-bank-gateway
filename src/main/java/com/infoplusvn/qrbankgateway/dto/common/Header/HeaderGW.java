@@ -1,4 +1,4 @@
-package com.infoplusvn.qrbankgateway.dto.common;
+package com.infoplusvn.qrbankgateway.dto.common.Header;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -8,14 +8,14 @@ import org.hibernate.validator.constraints.Length;
 import javax.validation.constraints.*;
 
 @Data
-public class Header {
+public class HeaderGW {
 
     @NotBlank
     @Length(min = 6 , max = 6)
     private String bkCd;
 
     @NotBlank
-    private String brCd;
+    private String brCd ;
 
     @NotBlank
     private String trnDt;

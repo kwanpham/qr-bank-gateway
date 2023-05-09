@@ -49,8 +49,15 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                 .cors().and()
                 .authorizeRequests().antMatchers("/infogw/qr/v1/oauth/token",
                         "/infogw/qr/v3/banks",
+                        "/infogw/qr/v1/readQR",
+                        "/infogw/qr/v1/getUser/{userName}",
+                        "/infogw/qr/v1/issuer/lookup",
                         "/infogw/qr/v1/genQR",
                         "/infogw/qr/v1/getAllUsers",
+                        "/infogw/qr/v1/issuer/lookup/res",
+                        "/infogw/qr/v1/issuer/lookup/",
+                        "/infogw/qr/v1/issuer/lookup/req",
+
                         "/infogw/qr/v1/createUser")
                 .permitAll()
                 .anyRequest().authenticated().and()

@@ -18,6 +18,8 @@ public enum QRCodeFormat {
     TRANSACTION_CURRENCY("53","704"), //Mã tiền tệ
     TRANSACTION_AMOUNT("54",""), //Số tiền giao dịch
     COUNTRY_CODE("58","VN"), //Mã quốc gia
+    CARD_ACCEPTOR_NAME("59", ""), // Tên ĐVCNTT
+    CARD_ACCEPTOR_CITY("60","HANOI"),
 
     //Trong Thông tin bổ sung có Mục đích giao dịch(ID 08)
     ADDITION_INFO("62",""), //Thông tin bổ sung

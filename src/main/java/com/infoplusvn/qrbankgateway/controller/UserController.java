@@ -1,5 +1,6 @@
 package com.infoplusvn.qrbankgateway.controller;
 
+import com.infoplusvn.qrbankgateway.dto.UserAccountInfo;
 import com.infoplusvn.qrbankgateway.dto.common.UserDTORoleAdmin;
 import com.infoplusvn.qrbankgateway.dto.common.UserDTORoleUser;
 import com.infoplusvn.qrbankgateway.dto.request.UserDTORegisterRequest;
@@ -43,8 +44,17 @@ public class UserController {
     @Autowired
     private UserService userService;
 
+
+
+    @GetMapping("/getUser/{userName}")
+    public UserAccountInfo getUserAccountInfo(@PathVariable("userName") String userName) {
+        return userService.findUserAccountInfo(userName);
+    }
+
+
     @PostMapping("/oauth/token")
-    public ResponseEntity<?> createAuthenticationToken(@RequestHeader("BasicAuth") String authorization) throws Exception {
+    public ResponseEntity<?> createAuthenticationToken(@RequestHeader("Authorization") String authorization) throws Exception {
+
 
         authorization = authorization.substring(6);
 //        log.info("authorization: {} " , authorization );

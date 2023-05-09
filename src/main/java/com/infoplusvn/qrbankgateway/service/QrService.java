@@ -6,11 +6,14 @@ import com.google.zxing.WriterException;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
 import com.infoplusvn.qrbankgateway.constant.CommonConstant;
+import com.infoplusvn.qrbankgateway.dto.common.Header.HeaderGW;
 import com.infoplusvn.qrbankgateway.dto.request.DeCodeQRRequest;
 import com.infoplusvn.qrbankgateway.dto.request.GenerateAdQR;
 import com.infoplusvn.qrbankgateway.dto.request.GenerateQRRequest;
+import com.infoplusvn.qrbankgateway.dto.request.LookupIssuer.GwRequest;
 import com.infoplusvn.qrbankgateway.dto.response.DeCodeQRResponse;
 import com.infoplusvn.qrbankgateway.dto.response.GenerateQRResponse;
+import com.infoplusvn.qrbankgateway.dto.response.LookupIssuer.NapasResponse;
 import com.infoplusvn.qrbankgateway.entity.BankEntity;
 import com.infoplusvn.qrbankgateway.exception.ValidationHelper;
 import com.infoplusvn.qrbankgateway.constant.ErrorDefination;
@@ -182,7 +185,7 @@ public class QrService {
         //To chuc thanh toan (ID 01)
         LinkedHashMap<String, String> linkedHashMapMemberBanks = new LinkedHashMap<>();
         //Don vi thu huong (ID 00)
-        linkedHashMapMemberBanks.put(QRCodeFormat.BNB_ID.getId(), qrRequest.getHeader().getBkCd().trim());
+        linkedHashMapMemberBanks.put(QRCodeFormat.BNB_ID.getId(), qrRequest.getHeaderGW().getBkCd().trim());
         //Thong tin nguoi huong thu (ID 01)
         linkedHashMapMemberBanks.put(QRCodeFormat.CONSUMER_ID.getId(), qrRequest.getData().getQrInfo().getCustomerId().trim());
 
@@ -257,7 +260,7 @@ public class QrService {
 
     private String genQRImageTheme(String qr, GenerateQRRequest qrRequest) throws WriterException, IOException {
 
-        BankEntity bank = bankRepo.findByBin(qrRequest.getHeader().getBkCd());
+        BankEntity bank = bankRepo.findByBin(qrRequest.getHeaderGW().getBkCd());
 
         BufferedImage baseImage = ImageIO.read(new File(CommonConstant.IMAGE_URL));
         BufferedImage qrImage = genQRImage(qr);
@@ -342,36 +345,40 @@ public class QrService {
 
     public GenerateQRResponse genQRResponse(GenerateQRRequest qrRequest) throws IOException, WriterException {
 
-        qrRequest.getHeader().setBrCd(CommonConstant.BRAND_CODE);
-        qrRequest.getHeader().setTrnDt(CommonConstant.TRANSACTION_DATE);
-        qrRequest.getHeader().setDirection(CommonConstant.DIRECTION);
-        qrRequest.getHeader().setReqResGb(CommonConstant.REQ_GB);
-        qrRequest.getHeader().setRefNo(CommonConstant.REFERENCE_NUMBER);
+
+        HeaderGW headerGW = new HeaderGW();
+        qrRequest.setHeaderGW(headerGW);
+        qrRequest.getHeaderGW().setBkCd("970462");
+        qrRequest.getHeaderGW().setBrCd(CommonConstant.BRAND_CODE);
+        qrRequest.getHeaderGW().setTrnDt(CommonConstant.TRANSACTION_DATE);
+        qrRequest.getHeaderGW().setDirection(CommonConstant.DIRECTION_INBOUND);
+        qrRequest.getHeaderGW().setReqResGb(CommonConstant.REQ_GB);
+        qrRequest.getHeaderGW().setRefNo(CommonConstant.REFERENCE_NUMBER);
 
         GenerateQRResponse generateQRResponse = new GenerateQRResponse();
         GenerateQRResponse.Data data = new GenerateQRResponse.Data();
         //generateQRResponse.setData(data);
-        generateQRResponse.setHeader(qrRequest.getHeader());
-        generateQRResponse.getHeader().setReqResGb(CommonConstant.RES_GB);
+        generateQRResponse.setHeaderGW(qrRequest.getHeaderGW());
+        generateQRResponse.getHeaderGW().setReqResGb(CommonConstant.RES_GB);
 
 
         //generateQRResponse.setData(data);
 
         if (!ValidationHelper.isValid(qrRequest)) {
             //System.out.println(ValidationHelper.fieldNames.get());
-            generateQRResponse.getHeader().setErrCode(ErrorDefination.ERR_004.getErrCode());
-            generateQRResponse.getHeader().setErrDesc(ErrorDefination.ERR_004.getDesc() + ": " + ValidationHelper.fieldNames.get());
+            generateQRResponse.getHeaderGW().setErrCode(ErrorDefination.ERR_004.getErrCode());
+            generateQRResponse.getHeaderGW().setErrDesc(ErrorDefination.ERR_004.getDesc() + ": " + ValidationHelper.fieldNames.get());
 
         } else if (!CommonConstant.listServiceCode.contains(qrRequest.getData().getQrInfo().getServiceCode().toUpperCase().trim())) {
-            generateQRResponse.getHeader().setErrCode(ErrorDefination.ERR_005.getErrCode());
-            generateQRResponse.getHeader().setErrDesc(ErrorDefination.ERR_005.getDesc());
+            generateQRResponse.getHeaderGW().setErrCode(ErrorDefination.ERR_005.getErrCode());
+            generateQRResponse.getHeaderGW().setErrDesc(ErrorDefination.ERR_005.getDesc());
         } else {
 
             String qrString = genQRString(qrRequest) + genCRC(genQRString(qrRequest));
 
             if (qrString == null || qrString.trim().isEmpty()) {
-                generateQRResponse.getHeader().setErrCode(ErrorDefination.ERR_001.getErrCode());
-                generateQRResponse.getHeader().setErrDesc(ErrorDefination.ERR_001.getDesc());
+                generateQRResponse.getHeaderGW().setErrCode(ErrorDefination.ERR_001.getErrCode());
+                generateQRResponse.getHeaderGW().setErrDesc(ErrorDefination.ERR_001.getDesc());
             } else {
                 generateQRResponse.setData(data);
                 generateQRResponse.getData().setResponseCode(ErrorDefination.ERR_OOO.getErrCode());
@@ -386,11 +393,14 @@ public class QrService {
 
     public DeCodeQRResponse parseQRString(DeCodeQRRequest deCodeQRRequest) throws UnsupportedEncodingException {
 
-        deCodeQRRequest.getHeader().setBrCd(CommonConstant.BRAND_CODE);
-        deCodeQRRequest.getHeader().setTrnDt(CommonConstant.TRANSACTION_DATE);
-        deCodeQRRequest.getHeader().setDirection(CommonConstant.DIRECTION);
-        deCodeQRRequest.getHeader().setReqResGb(CommonConstant.REQ_GB);
-        deCodeQRRequest.getHeader().setRefNo(CommonConstant.REFERENCE_NUMBER);
+        HeaderGW headerGW = new HeaderGW();
+        deCodeQRRequest.setHeaderGW(headerGW);
+        deCodeQRRequest.getHeaderGW().setBkCd("970462");
+        deCodeQRRequest.getHeaderGW().setBrCd(CommonConstant.BRAND_CODE);
+        deCodeQRRequest.getHeaderGW().setTrnDt(CommonConstant.TRANSACTION_DATE);
+        deCodeQRRequest.getHeaderGW().setDirection(CommonConstant.DIRECTION_INBOUND);
+        deCodeQRRequest.getHeaderGW().setReqResGb(CommonConstant.REQ_GB);
+        deCodeQRRequest.getHeaderGW().setRefNo(CommonConstant.REFERENCE_NUMBER);
 
 
         DeCodeQRResponse deCodeQRResponse = new DeCodeQRResponse();
@@ -398,17 +408,18 @@ public class QrService {
         DeCodeQRResponse.QrInfo qrInfo = new DeCodeQRResponse.QrInfo();
 
 
-        deCodeQRResponse.setHeader(deCodeQRRequest.getHeader());
-        deCodeQRResponse.getHeader().setReqResGb(CommonConstant.RES_GB);
+        deCodeQRResponse.setHeaderGW(deCodeQRRequest.getHeaderGW());
+        deCodeQRResponse.getHeaderGW().setReqResGb(CommonConstant.RES_GB);
 
         if (!ValidationHelper.isValid(deCodeQRRequest)) {
 
-            deCodeQRResponse.getHeader().setErrCode(ErrorDefination.ERR_004.getErrCode());
-            deCodeQRResponse.getHeader().setErrDesc(ErrorDefination.ERR_004.getDesc() + ": " + ValidationHelper.fieldNames.get());
+            deCodeQRResponse.getHeaderGW().setErrCode(ErrorDefination.ERR_004.getErrCode());
+            deCodeQRResponse.getHeaderGW().setErrDesc(ErrorDefination.ERR_004.getDesc() + ": " + ValidationHelper.fieldNames.get());
 
         } else if (!checkCRC(deCodeQRRequest.getData().getQrString().trim())) {
-            deCodeQRResponse.getHeader().setErrCode(ErrorDefination.ERR_008.getErrCode());
-            deCodeQRResponse.getHeader().setErrDesc(ErrorDefination.ERR_008.getDesc());
+            System.out.println(checkCRC(deCodeQRRequest.getData().getQrString().trim()));
+            deCodeQRResponse.getHeaderGW().setErrCode(ErrorDefination.ERR_008.getErrCode());
+            deCodeQRResponse.getHeaderGW().setErrDesc(ErrorDefination.ERR_008.getDesc());
         } else {
             data.setQrInfo(qrInfo);
             deCodeQRResponse.setData(data);
@@ -426,7 +437,16 @@ public class QrService {
             putHashMapAndCutQrString(QRCodeFormat.CONSUMER_ACCOUNT_INFO.getId() + "." + QRCodeFormat.MEMBER_BANKS.getId() + ".", linkedHashMapQRString, valueOfID38_01);
 
             String valueOfID62 = linkedHashMapQRString.get(QRCodeFormat.ADDITION_INFO.getId());
-            putHashMapAndCutQrString(QRCodeFormat.ADDITION_INFO.getId() + ".", linkedHashMapQRString, valueOfID62);
+
+            String valueOfID59 = linkedHashMapQRString.get(QRCodeFormat.CARD_ACCEPTOR_NAME.getValue());
+            if (valueOfID59 != null) {
+                deCodeQRResponse.getData().getQrInfo().setMerchantName(valueOfID59);
+            }
+
+            if (valueOfID62 != null) {
+                putHashMapAndCutQrString(QRCodeFormat.ADDITION_INFO.getId() + ".", linkedHashMapQRString, valueOfID62);
+                deCodeQRResponse.getData().getQrInfo().setAdditionInfo(linkedHashMapQRString.get(QRCodeFormat.ADDITION_INFO.getId() + "." + QRCodeFormat.PURPOSE_TRANSACTION.getId()));
+            }
 
 
             deCodeQRResponse.getData().setResponseCode(ErrorDefination.ERR_OOO.getErrCode());
@@ -439,7 +459,7 @@ public class QrService {
             deCodeQRResponse.getData().getQrInfo().setAdditionInfo(linkedHashMapQRString.get(QRCodeFormat.ADDITION_INFO.getId() + "." + QRCodeFormat.PURPOSE_TRANSACTION.getId()));
             deCodeQRResponse.getData().getQrInfo().setCrc(linkedHashMapQRString.get(QRCodeFormat.CRC.getId()));
 
-            deCodeQRResponse.getHeader().setBkCd(linkedHashMapQRString.get(QRCodeFormat.CONSUMER_ACCOUNT_INFO.getId() + "." + QRCodeFormat.MEMBER_BANKS.getId() + "." + QRCodeFormat.BNB_ID.getId()));
+            deCodeQRResponse.getHeaderGW().setBkCd(linkedHashMapQRString.get(QRCodeFormat.CONSUMER_ACCOUNT_INFO.getId() + "." + QRCodeFormat.MEMBER_BANKS.getId() + "." + QRCodeFormat.BNB_ID.getId()));
 
 
         }
@@ -448,24 +468,26 @@ public class QrService {
     }
 
     public GenerateQRResponse genAdQR(GenerateAdQR qrRequest) throws IOException, WriterException {
-
-        qrRequest.getHeader().setBrCd(CommonConstant.BRAND_CODE);
-        qrRequest.getHeader().setTrnDt(CommonConstant.TRANSACTION_DATE);
-        qrRequest.getHeader().setDirection(CommonConstant.DIRECTION);
-        qrRequest.getHeader().setReqResGb(CommonConstant.REQ_GB);
-        qrRequest.getHeader().setRefNo(CommonConstant.REFERENCE_NUMBER);
+        HeaderGW headerGW = new HeaderGW();
+        qrRequest.setHeaderGW(headerGW);
+        qrRequest.getHeaderGW().setBkCd("970462");
+        qrRequest.getHeaderGW().setBrCd(CommonConstant.BRAND_CODE);
+        qrRequest.getHeaderGW().setTrnDt(CommonConstant.TRANSACTION_DATE);
+        qrRequest.getHeaderGW().setDirection(CommonConstant.DIRECTION_INBOUND);
+        qrRequest.getHeaderGW().setReqResGb(CommonConstant.REQ_GB);
+        qrRequest.getHeaderGW().setRefNo(CommonConstant.REFERENCE_NUMBER);
 
         GenerateQRResponse generateQRResponse = new GenerateQRResponse();
         GenerateQRResponse.Data data = new GenerateQRResponse.Data();
 
-        generateQRResponse.setHeader(qrRequest.getHeader());
-        generateQRResponse.getHeader().setReqResGb(CommonConstant.RES_GB);
+        generateQRResponse.setHeaderGW(qrRequest.getHeaderGW());
+        generateQRResponse.getHeaderGW().setReqResGb(CommonConstant.RES_GB);
 
 
         if (!ValidationHelper.isValid(qrRequest)) {
             //System.out.println(ValidationHelper.fieldNames.get());
-            generateQRResponse.getHeader().setErrCode(ErrorDefination.ERR_004.getErrCode());
-            generateQRResponse.getHeader().setErrDesc(ErrorDefination.ERR_004.getDesc() + ": " + ValidationHelper.fieldNames.get());
+            generateQRResponse.getHeaderGW().setErrCode(ErrorDefination.ERR_004.getErrCode());
+            generateQRResponse.getHeaderGW().setErrDesc(ErrorDefination.ERR_004.getDesc() + ": " + ValidationHelper.fieldNames.get());
 
         } else {
             generateQRResponse.setData(data);

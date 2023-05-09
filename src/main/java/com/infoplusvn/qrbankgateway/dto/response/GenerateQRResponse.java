@@ -1,16 +1,12 @@
 package com.infoplusvn.qrbankgateway.dto.response;
 
-import com.infoplusvn.qrbankgateway.dto.common.Header;
-import lombok.AllArgsConstructor;
+import com.infoplusvn.qrbankgateway.dto.common.Header.HeaderGW;
 import lombok.Data;
-import lombok.NoArgsConstructor;
-
-import java.util.Base64;
 
 @Data
 public class GenerateQRResponse {
 
-    private Header header;
+    private HeaderGW headerGW;
 
     private Data data;
 
