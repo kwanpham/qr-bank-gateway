@@ -128,13 +128,24 @@ public class TransactionServiceImpl implements TransactionService {
 
     }
 
-//    @Override
-//    public List<TransactionDTO> getAllTransactions() {
-//        return transactionRepo.getAllTransaction();
-//    }
+    @Override
+    public List<TransactionDTO> getAllTransactions() {
+        return transactionRepo.getAllTransaction();
+    }
 
     @Override
-    public List<TransactionEntity> getAllTransactions() {
-        return transactionRepo.findAll();
+    public List<TransactionActivityEntity> getAllActivity() {
+        return activityRepo.findAll();
     }
+
+    @Override
+    public List<TransactionActivityEntity> getActivityByTransactionId(Long transactionId) {
+        return activityRepo.findByTransactionId(transactionId);
+    }
+
+
+//    @Override
+//    public List<TransactionEntity> getAllTransactions() {
+//        return transactionRepo.findAll();
+//    }
 }

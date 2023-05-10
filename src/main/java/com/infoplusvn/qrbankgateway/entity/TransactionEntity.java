@@ -77,11 +77,4 @@ public class TransactionEntity {
     @JsonIgnore
     private Set<TransactionActivityEntity> transactionActivity;
 
-
-
-
-
-
-
-
 }

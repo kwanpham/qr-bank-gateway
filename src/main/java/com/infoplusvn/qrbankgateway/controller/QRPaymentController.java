@@ -1,5 +1,6 @@
 package com.infoplusvn.qrbankgateway.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.infoplusvn.qrbankgateway.constant.CommonConstant;
 import com.infoplusvn.qrbankgateway.dto.common.payment.TransactionDTO;
 import com.infoplusvn.qrbankgateway.dto.request.lookup_ben.LookupBenReqNAPAS;
@@ -26,7 +27,7 @@ public class QRPaymentController {
     QRPaymentServiceImpl qrPaymentService;
 
     @PostMapping(value = "/payment")
-    public PaymentResponseGW genPaymentResGW(@RequestBody PaymentRequestGW paymentRequestGW) {
+    public PaymentResponseGW genPaymentResGW(@RequestBody PaymentRequestGW paymentRequestGW) throws JsonProcessingException {
 
         return qrPaymentService.genPaymentResGW(paymentRequestGW);
 

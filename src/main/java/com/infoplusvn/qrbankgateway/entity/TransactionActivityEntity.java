@@ -39,4 +39,5 @@ public class TransactionActivityEntity {
     @JoinColumn(name = "transaction_id", nullable = false)
     @JsonIgnore
     private TransactionEntity transaction;
+
 }

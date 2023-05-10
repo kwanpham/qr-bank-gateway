@@ -21,8 +21,12 @@ public interface TransactionService {
 
     void createActivity(TransactionEntity transaction, String msgContent, String errCode, String errDesc, String activityStep, String activityStepStatus);
 
-    //List<TransactionDTO> getAllTransactions();
+    List<TransactionDTO> getAllTransactions();
 
-    List<TransactionEntity> getAllTransactions();
+    //List<TransactionEntity> getAllTransactions();
+
+    List<TransactionActivityEntity> getAllActivity();
+
+    List<TransactionActivityEntity> getActivityByTransactionId(Long transactionId);
 
 }

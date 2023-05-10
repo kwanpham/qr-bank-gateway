@@ -1,9 +1,12 @@
 package com.infoplusvn.qrbankgateway.service.impl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.infoplusvn.qrbankgateway.constant.CommonConstant;
 import com.infoplusvn.qrbankgateway.constant.ErrorDefination;
 import com.infoplusvn.qrbankgateway.constant.PaymentConstant;
 import com.infoplusvn.qrbankgateway.dto.common.HeaderInfoGW;
+import com.infoplusvn.qrbankgateway.dto.common.HeaderNAPAS;
 import com.infoplusvn.qrbankgateway.dto.common.payment.TransactionDTO;
 import com.infoplusvn.qrbankgateway.dto.request.lookup_ben.LookupBenReqInfoGW;
 import com.infoplusvn.qrbankgateway.dto.request.payment.PaymentRequestGW;
@@ -23,6 +26,7 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -40,6 +44,8 @@ public class QRPaymentServiceImpl implements QRPaymentService {
     private PaymentRequestNAPAS genMappingReqNAPAS(PaymentRequestGW request) {
 
         PaymentRequestNAPAS paymentRequestNAPAS = new PaymentRequestNAPAS();
+        HeaderNAPAS header = new HeaderNAPAS();
+        HeaderNAPAS.Requestor requestor = new HeaderNAPAS.Requestor();
         PaymentRequestNAPAS.Payload payload = new PaymentRequestNAPAS.Payload();
         PaymentRequestNAPAS.Payment payment = new PaymentRequestNAPAS.Payment();
         PaymentRequestNAPAS.Sender sender = new PaymentRequestNAPAS.Sender();
@@ -48,6 +54,15 @@ public class QRPaymentServiceImpl implements QRPaymentService {
         PaymentRequestNAPAS.Address senderAddress = new PaymentRequestNAPAS.Address();
         PaymentRequestNAPAS.Address recipientAddress = new PaymentRequestNAPAS.Address();
         PaymentRequestNAPAS.OrderInfo orderInfo = new PaymentRequestNAPAS.OrderInfo();
+
+        //requestor
+        requestor.setId("ID01");
+        requestor.setName("Name01");
+
+        //header
+        header.setRequestor(requestor);
+        header.setReference_id(request.getHeader().getRefNo());
+        header.setOperation(CommonConstant.REQ_GB);
 
         //payment
         payment.setFunding_reference(request.getData().getFundingReference());
@@ -99,7 +114,7 @@ public class QRPaymentServiceImpl implements QRPaymentService {
         payload.setAdditional_message(request.getData().getAdditionMessage());
         payload.setOrder_info(orderInfo);
 
-
+        paymentRequestNAPAS.setHeader(header);
         paymentRequestNAPAS.setPayload(payload);
 
         return paymentRequestNAPAS;
@@ -132,7 +147,10 @@ public class QRPaymentServiceImpl implements QRPaymentService {
 
     }
 
-    private void sentToIssuerBank(PaymentResponseGW paymentResponseGW, HeaderInfoGW header, TransactionEntity transaction) {
+    private void sentToIssuerBank(PaymentResponseGW paymentResponseGW, HeaderInfoGW header, TransactionEntity transaction) throws JsonProcessingException {
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        String paymentResponseGWJson = objectMapper.writeValueAsString(paymentResponseGW);
         try {
             RestTemplate restTemplate = new RestTemplate();
 
@@ -150,12 +168,15 @@ public class QRPaymentServiceImpl implements QRPaymentService {
 
             //nếu gửi sang issuerBank thành công
             transactionService.updateTransStep(transaction, PaymentConstant.STEP_SENT, PaymentConstant.STEP_STATUS_SUCCESS_CODE, PaymentConstant.STEP_STATUS_SUCCESS_DESC);
+            //dành cho trường hợp nhận được bản tin sai định dạng và gửi trả luôn cho core
             if (paymentResponseGW.getData() == null) {
                 transactionService.updateErrCodeDesc(transaction, paymentResponseGW.getHeader().getErrCode(), paymentResponseGW.getHeader().getErrDesc());
-                transactionService.createActivity(transaction, String.valueOf(paymentResponseGW.getData()), paymentResponseGW.getHeader().getErrCode(), paymentResponseGW.getHeader().getErrDesc(), PaymentConstant.ACTIVITY_STEP_SEND_TO_CORE, PaymentConstant.STEP_STATUS_SUCCESS_CODE);
-            } else {
+                transactionService.createActivity(transaction, paymentResponseGWJson, paymentResponseGW.getHeader().getErrCode(), paymentResponseGW.getHeader().getErrDesc(), PaymentConstant.ACTIVITY_STEP_SEND_TO_CORE, PaymentConstant.STEP_STATUS_SUCCESS_CODE);
+            }
+            //trường hợp nhận được bản tin đúng định dạng và trả về cho core ở step 4
+            else {
                 transactionService.updateErrCodeDesc(transaction, paymentResponseGW.getData().getResponseCode(), paymentResponseGW.getData().getResponseDesc());
-                transactionService.createActivity(transaction, String.valueOf(paymentResponseGW.getData()), paymentResponseGW.getData().getResponseCode(), paymentResponseGW.getData().getResponseDesc(), PaymentConstant.ACTIVITY_STEP_SEND_TO_CORE, PaymentConstant.STEP_STATUS_SUCCESS_CODE);
+                transactionService.createActivity(transaction, paymentResponseGWJson, paymentResponseGW.getData().getResponseCode(), paymentResponseGW.getData().getResponseDesc(), PaymentConstant.ACTIVITY_STEP_SEND_TO_CORE, PaymentConstant.STEP_STATUS_SUCCESS_CODE);
             }
             transactionService.updateSentDt(transaction, LocalDateTime.now());
 
@@ -171,24 +192,28 @@ public class QRPaymentServiceImpl implements QRPaymentService {
             transactionService.updateErrCodeDesc(transaction, paymentResponseGW.getHeader().getErrCode(), paymentResponseGW.getHeader().getErrDesc());
             transactionService.updateSentDt(transaction, LocalDateTime.now());
 
-            transactionService.createActivity(transaction, String.valueOf(paymentResponseGW.getData()), paymentResponseGW.getHeader().getErrCode(), paymentResponseGW.getHeader().getErrDesc(), PaymentConstant.ACTIVITY_STEP_SEND_TO_CORE, PaymentConstant.STEP_STATUS_ERROR_CODE);
+            transactionService.createActivity(transaction, paymentResponseGWJson, paymentResponseGW.getHeader().getErrCode(), paymentResponseGW.getHeader().getErrDesc(), PaymentConstant.ACTIVITY_STEP_SEND_TO_CORE, PaymentConstant.STEP_STATUS_ERROR_CODE);
 
             log.error("Lỗi: " + ex);
         }
     }
 
     @Override
-    public PaymentResponseGW genPaymentResGW(PaymentRequestGW paymentRequestGW) {
+    public PaymentResponseGW genPaymentResGW(PaymentRequestGW paymentRequestGW) throws JsonProcessingException {
 
         PaymentResponseGW paymentResponseGW = new PaymentResponseGW();
         HeaderInfoGW header = paymentRequestGW.getHeader();
         header.setReqResGb(CommonConstant.RES_GB);
 
+        ObjectMapper objectMapper = new ObjectMapper();
+        String paymentRequestGWJson = objectMapper.writeValueAsString(paymentRequestGW);
 
         log.info("----------------LUỒNG ĐI PAYMENT -----------------");
         try {
+
             TransactionEntity transaction = transactionService.createTransaction(paymentRequestGW,"Payment", PaymentConstant.STEP_RECV, PaymentConstant.STEP_STATUS_SUCCESS_CODE, PaymentConstant.STEP_STATUS_SUCCESS_DESC);
-            transactionService.createActivity(transaction, String.valueOf(paymentRequestGW.getData()), null, null, PaymentConstant.ACTIVITY_STEP_RECV_FROM_CORE, PaymentConstant.STEP_STATUS_SUCCESS_CODE);
+            transactionService.createActivity(transaction, paymentRequestGWJson, PaymentConstant.STEP_STATUS_SUCCESS_CODE, PaymentConstant.STEP_STATUS_SUCCESS_DESC, PaymentConstant.ACTIVITY_STEP_RECV_FROM_CORE, PaymentConstant.STEP_STATUS_SUCCESS_CODE);
+
             if (!ValidationHelper.isValid(paymentRequestGW)) {
                 //convert bản tin với lỗi tường minh gửi cho core
                 header.setErrCode(ErrorDefination.ERR_004.getErrCode());
@@ -198,6 +223,8 @@ public class QRPaymentServiceImpl implements QRPaymentService {
                 //nếu bản tin sai định dạng thì cập nhật lại là nhận được bản tin sai với lỗi tường minh
                 transactionService.updateTransStep(transaction, PaymentConstant.STEP_RECV, PaymentConstant.STEP_STATUS_ERROR_CODE, paymentResponseGW.getHeader().getErrDesc());
                 log.info("STEP 1: RECV_FROM_CORE: " + transaction);
+
+
 
                 //sent to core
 //                try {
@@ -257,6 +284,7 @@ public class QRPaymentServiceImpl implements QRPaymentService {
                 transactionService.updateSentDt(transaction, LocalDateTime.now());
 
                 //sent to NAPAS
+                String paymentRequestNAPASJson = objectMapper.writeValueAsString(paymentRequestNAPAS);
                 try {
                     RestTemplate restTemplate = new RestTemplate();
 
@@ -270,24 +298,30 @@ public class QRPaymentServiceImpl implements QRPaymentService {
 
                     // Gọi API sử dụng phương thức POST và truyền vào body là đối tượng requestEntity
                     //NAPAS gửi bản tin chuẩn NAPAS sang Ben Bank, sau đó nhận bản tin về theo chuẩn NAPAS
-                    PaymentResponseNAPAS paymentResponseNAPAS = restTemplate.postForObject(apiUrl, requestDTO, PaymentResponseNAPAS.class);
-                    transactionService.createActivity(transaction, String.valueOf(paymentRequestNAPAS.getPayload()), null, null, PaymentConstant.ACTIVITY_STEP_SEND_TO_NAPAS, PaymentConstant.STEP_STATUS_SUCCESS_CODE);
+                    ResponseEntity<PaymentResponseNAPAS> responseEntity = restTemplate.postForEntity(apiUrl, requestDTO, PaymentResponseNAPAS.class);
+
+                    //nếu sent thành công
+                    transactionService.createActivity(transaction, paymentRequestNAPASJson, PaymentConstant.STEP_STATUS_SUCCESS_CODE, PaymentConstant.STEP_STATUS_SUCCESS_DESC, PaymentConstant.ACTIVITY_STEP_SEND_TO_NAPAS, PaymentConstant.STEP_STATUS_SUCCESS_CODE);
                     log.info("STEP 2: SEND_TO_NAPAS: " + transaction);
 
-                    // Nhận bản tin từ NAPAS
-                    transactionService.updateTransStep(transaction, PaymentConstant.STEP_RECV, PaymentConstant.STEP_STATUS_SUCCESS_CODE, PaymentConstant.STEP_STATUS_SUCCESS_DESC);
-                    transactionService.updateReceivedDt(transaction, LocalDateTime.now());
-                    transactionService.updateErrCodeDesc(transaction, PaymentConstant.STEP_STATUS_SUCCESS_CODE, PaymentConstant.STEP_STATUS_SUCCESS_DESC);
+                    // nếu nhận bản tin từ NAPAS với statusCode = 2xx (thành công)
+                    if(responseEntity.getStatusCode().is2xxSuccessful()){
 
-                    transactionService.createActivity(transaction, String.valueOf(paymentResponseNAPAS.getPayload()), PaymentConstant.STEP_STATUS_SUCCESS_CODE, PaymentConstant.STEP_STATUS_SUCCESS_DESC, PaymentConstant.ACTIVITY_STEP_RECV_FROM_NAPAS, PaymentConstant.STEP_STATUS_SUCCESS_CODE);
-                    log.info("STEP 3: RECV_FROM_NAPAS: " + transaction);
+                        PaymentResponseNAPAS paymentResponseNAPAS = responseEntity.getBody();
 
-                    //mapping dữ liệu từ ResponseNAPAS sang ResponseInfoGW
-                    paymentResponseGW = genMappingResGW(paymentResponseNAPAS);
-                    paymentResponseGW.setHeader(header);
+                        transactionService.updateTransStep(transaction, PaymentConstant.STEP_RECV, PaymentConstant.STEP_STATUS_SUCCESS_CODE, PaymentConstant.STEP_STATUS_SUCCESS_DESC);
+                        transactionService.updateReceivedDt(transaction, LocalDateTime.now());
+                        transactionService.updateErrCodeDesc(transaction, PaymentConstant.STEP_STATUS_SUCCESS_CODE, PaymentConstant.STEP_STATUS_SUCCESS_DESC);
 
-                    //sent to core
+                        String paymentResponseNAPASJson = objectMapper.writeValueAsString(paymentResponseNAPAS);
+                        transactionService.createActivity(transaction, paymentResponseNAPASJson, PaymentConstant.STEP_STATUS_SUCCESS_CODE, PaymentConstant.STEP_STATUS_SUCCESS_DESC, PaymentConstant.ACTIVITY_STEP_RECV_FROM_NAPAS, PaymentConstant.STEP_STATUS_SUCCESS_CODE);
+                        log.info("STEP 3: RECV_FROM_NAPAS: " + transaction);
 
+                        //mapping dữ liệu từ ResponseNAPAS sang ResponseInfoGW
+                        paymentResponseGW = genMappingResGW(paymentResponseNAPAS);
+                        paymentResponseGW.setHeader(header);
+
+                        //sent to core
 //                    try {
 //                        RestTemplate restTemplateSendToCore = new RestTemplate();
 //
@@ -324,10 +358,26 @@ public class QRPaymentServiceImpl implements QRPaymentService {
 //                        log.error("Lỗi: " + ex);
 //                        return paymentResponseGW;
 //                    }
-                    sentToIssuerBank(paymentResponseGW, header, transaction);
-                    log.info("STEP 4: SEND_TO_CORE: " + transaction);
+                        sentToIssuerBank(paymentResponseGW, header, transaction);
+                        log.info("STEP 4: SEND_TO_CORE: " + transaction);
 
-                    return paymentResponseGW;
+                        return paymentResponseGW;
+                    } else {
+                        header.setErrCode(ErrorDefination.ERR_001.getErrCode());
+                        header.setErrDesc(ErrorDefination.ERR_001.getDesc());
+                        paymentResponseGW.setHeader(header);
+
+                        transactionService.updateTransStep(transaction, PaymentConstant.STEP_RECV, PaymentConstant.STEP_STATUS_ERROR_CODE, PaymentConstant.RECV_ERR);
+                        transactionService.updateReceivedDt(transaction, LocalDateTime.now());
+                        transactionService.updateErrCodeDesc(transaction, paymentResponseGW.getHeader().getErrCode(), paymentResponseGW.getHeader().getErrDesc());
+
+                        transactionService.createActivity(transaction, null, paymentResponseGW.getHeader().getErrCode(), paymentResponseGW.getHeader().getErrDesc(), PaymentConstant.ACTIVITY_STEP_RECV_FROM_NAPAS, PaymentConstant.STEP_STATUS_ERROR_CODE);
+                        log.info("STEP 3: RECV_FROM_NAPAS: " + transaction);
+
+                        log.error("Lỗi: Gặp lỗi khi nhận bản tin về từ NAPAS" );
+                        return paymentResponseGW;
+                    }
+
 
 
                 } catch (Exception ex) {
@@ -340,7 +390,8 @@ public class QRPaymentServiceImpl implements QRPaymentService {
                     transactionService.updateSentDt(transaction, LocalDateTime.now());
                     transactionService.updateErrCodeDesc(transaction, paymentResponseGW.getHeader().getErrCode(), paymentResponseGW.getHeader().getErrDesc());
 
-                    transactionService.createActivity(transaction, String.valueOf(paymentRequestNAPAS.getPayload()), paymentResponseGW.getHeader().getErrCode(), paymentResponseGW.getHeader().getErrDesc(), PaymentConstant.ACTIVITY_STEP_SEND_TO_NAPAS, PaymentConstant.STEP_STATUS_ERROR_CODE);
+
+                    transactionService.createActivity(transaction, paymentRequestNAPASJson, paymentResponseGW.getHeader().getErrCode(), paymentResponseGW.getHeader().getErrDesc(), PaymentConstant.ACTIVITY_STEP_SEND_TO_NAPAS, PaymentConstant.STEP_STATUS_ERROR_CODE);
                     log.info("STEP 2: SEND_TO_NAPAS: " + transaction);
 
                     log.error("Lỗi: " + ex);

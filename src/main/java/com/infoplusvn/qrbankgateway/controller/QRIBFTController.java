@@ -54,7 +54,7 @@ public class QRIBFTController {
 
         List<QrCodeDTORoleUser> qrCodeDTORoleUsers = qrService.finByCreatedUserRoleUser(createdUser.trim());
 
-        if (qrCodeDTORoleUsers.size() < 0) {
+        if (qrCodeDTORoleUsers.size() <= 0) {
             throw new ResourceNotFoundException("không tìm thấy qrcode có createdUser = " + createdUser);
         } else {
             return new DataResponse().setStatus(CommonConstant.STATUS_SUCCESS)
@@ -68,7 +68,7 @@ public class QRIBFTController {
 
         List<QrCodeDTORoleUser> qrCodeDTORoleUsers = qrService.findByCreatedUserAndEnabledFalseRoleUser(createdUser.trim());
 
-        if (qrCodeDTORoleUsers.size() < 0) {
+        if (qrCodeDTORoleUsers.size() <= 0) {
             throw new ResourceNotFoundException("không tìm thấy qrcode có createdUser = " + createdUser);
         } else {
             return new DataResponse().setStatus(CommonConstant.STATUS_SUCCESS)

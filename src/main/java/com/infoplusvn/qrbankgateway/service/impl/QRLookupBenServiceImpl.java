@@ -1,12 +1,19 @@
 package com.infoplusvn.qrbankgateway.service.impl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.infoplusvn.qrbankgateway.constant.ErrorDefination;
+import com.infoplusvn.qrbankgateway.constant.LookupConstant;
+import com.infoplusvn.qrbankgateway.constant.PaymentConstant;
 import com.infoplusvn.qrbankgateway.constant.QRCodeFormat;
 import com.infoplusvn.qrbankgateway.dto.common.HeaderInfoGW;
+import com.infoplusvn.qrbankgateway.dto.common.HeaderNAPAS;
 import com.infoplusvn.qrbankgateway.dto.request.lookup_ben.LookupBenReqInfoGW;
 import com.infoplusvn.qrbankgateway.dto.request.lookup_ben.LookupBenReqNAPAS;
 import com.infoplusvn.qrbankgateway.dto.response.lookup_ben.LookupBenResInfoGW;
 import com.infoplusvn.qrbankgateway.dto.response.lookup_ben.LookupBenResNAPAS;
+import com.infoplusvn.qrbankgateway.dto.response.payment.PaymentResponseGW;
+import com.infoplusvn.qrbankgateway.entity.TransactionEntity;
 import com.infoplusvn.qrbankgateway.exception.ValidationHelper;
 import com.infoplusvn.qrbankgateway.service.QRLookupBenService;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.UnsupportedEncodingException;
+import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 
 @Slf4j
@@ -24,6 +32,9 @@ public class QRLookupBenServiceImpl implements QRLookupBenService {
 
     @Autowired
     QrIBTFServiceImpl qrIBTFService;
+
+    @Autowired
+    TransactionServiceImpl transactionService;
 
     private LookupBenReqInfoGW genMappingReqInfoGW(LookupBenReqNAPAS lookupBenReqNAPAS) {
 
@@ -72,7 +83,7 @@ public class QRLookupBenServiceImpl implements QRLookupBenService {
             qrIBTFService.putHashMapAndCutQrString("64" + ".", linkedHashMapQRString, valueOfID64);
         }
 
-        log.info("LinkedHashMap" + linkedHashMapQRString);
+        //log.info("LinkedHashMap" + linkedHashMapQRString);
 
 
         //data.payment
@@ -400,6 +411,49 @@ public class QRLookupBenServiceImpl implements QRLookupBenService {
         return lookupBenResNAPAS;
     }
 
+    private void sentToNapas(LookupBenResNAPAS lookupBenResNAPAS, LookupBenResNAPAS.Result result, TransactionEntity transaction) throws JsonProcessingException {
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        String lookupBenResNAPASJson = objectMapper.writeValueAsString(lookupBenResNAPAS);
+        try {
+            RestTemplate restTemplate = new RestTemplate();
+
+            String apiUrl = LookupConstant.API_URL_SENT_TO_NAPAS;
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            // Tạo một đối tượng HttpEntity để đại diện cho toàn bộ yêu cầu POST
+            HttpEntity<LookupBenResNAPAS> requestDTO = new HttpEntity<>(lookupBenResNAPAS, headers);
+
+            // Gọi API sử dụng phương thức POST và truyền vào body là đối tượng requestEntity
+            //InfoGW gửi bản tin chuẩn NAPAS sang NAPAS
+            restTemplate.postForLocation(apiUrl, requestDTO);
+
+            //nếu gửi sang NAPAS thành công
+            transactionService.updateTransStep(transaction, PaymentConstant.STEP_SENT, PaymentConstant.STEP_STATUS_SUCCESS_CODE, PaymentConstant.STEP_STATUS_SUCCESS_DESC);
+            transactionService.updateErrCodeDesc(transaction, lookupBenResNAPAS.getResult().getCode(), lookupBenResNAPAS.getResult().getMessage());
+            transactionService.createActivity(transaction, lookupBenResNAPASJson, lookupBenResNAPAS.getResult().getCode(), lookupBenResNAPAS.getResult().getMessage(), LookupConstant.ACTIVITY_STEP_SEND_TO_NAPAS, PaymentConstant.STEP_STATUS_SUCCESS_CODE);
+
+            transactionService.updateSentDt(transaction, LocalDateTime.now());
+
+
+        } catch (Exception ex) {
+            //nếu gửi sang issuerBank không thành công
+            result.setCode(ErrorDefination.ERR_068.getErrCode());
+            result.setMessage(ErrorDefination.ERR_068.getDesc());
+            lookupBenResNAPAS.setResult(result);
+
+            transactionService.updateTransStep(transaction, PaymentConstant.STEP_SENT, PaymentConstant.STEP_STATUS_ERROR_CODE, PaymentConstant.STEP_STATUS_ERROR_DESC);
+            transactionService.updateErrCodeDesc(transaction, lookupBenResNAPAS.getResult().getCode(), lookupBenResNAPAS.getResult().getMessage());
+            transactionService.updateSentDt(transaction, LocalDateTime.now());
+
+            transactionService.createActivity(transaction, lookupBenResNAPASJson, lookupBenResNAPAS.getResult().getCode(), lookupBenResNAPAS.getResult().getMessage(), LookupConstant.ACTIVITY_STEP_SEND_TO_NAPAS, PaymentConstant.STEP_STATUS_ERROR_CODE);
+
+            log.error("Lỗi: " + ex);
+        }
+    }
+
     @Override
     public LookupBenResNAPAS genLookupBenResNAPAS(LookupBenReqNAPAS lookupBenReqNAPAS) throws UnsupportedEncodingException {
         log.info("----------------LUỒNG ĐI LOOKUP BEN -----------------");
@@ -436,7 +490,7 @@ public class QRLookupBenServiceImpl implements QRLookupBenService {
 
             RestTemplate restTemplate = new RestTemplate();
 
-            String apiUrl = "http://localhost:8029/benbank/qr/v1/ben/lookup";
+            String apiUrl = "http://localhost:8029/benbank/qr/v1/ben/sentBenBank";
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
@@ -469,7 +523,6 @@ public class QRLookupBenServiceImpl implements QRLookupBenService {
                 return null;
             }
         }
-
 
 
         return lookupBenResNAPAS;

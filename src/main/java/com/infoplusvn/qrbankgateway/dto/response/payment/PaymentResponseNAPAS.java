@@ -12,6 +12,8 @@ import java.util.List;
 @Data
 public class PaymentResponseNAPAS {
 
+    private HeaderNAPAS header;
+
     private Payload payload;
 
     private String additional_message;
